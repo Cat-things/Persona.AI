@@ -16,7 +16,7 @@ updated, and a commit.
 | 3 | Web frontend: discover, chat, create character | done |
 | 4 | Installer (Docker, then native) | done (native mode untested on a real host, see log) |
 | 5 | Avatar generation | done |
-| 6 | TTS voices + playback | pending |
+| 6 | TTS voices + playback | done |
 | 7 | Calls (STT + streaming pipeline + barge-in) | pending |
 | 8 | Group chats, personas, card import/export | pending |
 | 9 | Mobile app (Expo) | pending |
@@ -207,3 +207,14 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
   dedicated worker). Web: generator modal (prompt, write-from-description, styles,
   generate 4, pick) and a circular pan/zoom cropper (pointer, wheel, keyboard) exporting
   a 512px square. 53 tests.
+- Phase 6: TTS providers behind one interface returning PCM16 (Kokoro in-process with
+  auto-downloaded model files, Piper binary, XTTS-v2 streaming server, ElevenLabs,
+  OpenAI-compatible speech incl. Kokoro-FastAPI voice listing, mock). Voice library synced
+  from the provider, per-character voice, default voice fallback, content-hash audio
+  cache (MP3 via ffmpeg, WAV otherwise), `*actions*` stripped before speaking, preview
+  endpoint, voice cloning (XTTS latents / ElevenLabs instant clone) gated on an explicit
+  rights confirmation, samples stored outside public media, `tts_prerender` job when
+  auto-play is on, `/capabilities`. Web: shared single-audio player, play/stop on every
+  reply, auto-play toggle (chat header + settings), voice picker with browse/filter/preview
+  and clone form. Verified real in-process Kokoro here (54 voices, 2.7 s speech in 1.2 s
+  on CPU). 62 tests.
