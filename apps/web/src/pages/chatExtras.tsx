@@ -1,6 +1,8 @@
 import type { Character, ChatEvent, Message, Room } from "@persona/shared";
 import { Loader2, MessageSquarePlus, Square, Volume2, VolumeX } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
+import { useNavigate } from "react-router";
+import { MicButton } from "../components/MicButton";
 import type { useChatSession } from "../hooks/useChatSession";
 import { api, chatSocket } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -12,7 +14,7 @@ export interface ChatExtras {
   menuItems?: (close: () => void) => ReactNode;
   messageActions?: (m: Message) => ReactNode;
   aboveComposer?: ReactNode;
-  micSlot?: ReactNode;
+  micSlot?: (append: (text: string) => void) => ReactNode;
   onCall?: () => void;
 }
 
@@ -65,7 +67,10 @@ export function useChatExtras({
 
   useEffect(() => () => voicePlayer.stop(), [chatId]);
 
+  const navigate = useNavigate();
   const extras: ChatExtras = {};
+  if (caps.data?.stt) extras.micSlot = (append) => <MicButton onText={append} />;
+  if (caps.data?.calls && !room) extras.onCall = () => navigate(`/call/${chatId}`);
   if (tts) {
     extras.messageActions = (m) =>
       m.role === "assistant" && !m.id.startsWith("tmp-") ? <PlayButton m={m} /> : null;

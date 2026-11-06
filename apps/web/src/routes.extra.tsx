@@ -1,4 +1,5 @@
 import type { RouteObject } from "react-router";
+import { CallPage } from "./pages/Call";
 
 /** Routes added by later phases (rooms, calls). */
 export const extraRoutes: {
@@ -7,6 +8,6 @@ export const extraRoutes: {
   shell: RouteObject[];
 } = {
   public: [],
-  fullscreen: [],
+  fullscreen: [{ path: "call/:chatId", element: <CallPage /> }],
   shell: [],
 };

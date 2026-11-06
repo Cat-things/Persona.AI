@@ -18,7 +18,7 @@ export function Composer({
   onSend: (text: string) => void;
   onStop: () => void;
   onCall?: () => void;
-  micSlot?: ReactNode;
+  micSlot?: (append: (text: string) => void) => ReactNode;
   draftKey: string;
 }) {
   const [text, setText] = useState(() => {
@@ -84,7 +84,7 @@ export function Composer({
         enterKeyHint="send"
         className="flex-1 resize-none bg-transparent py-2 text-ink placeholder:text-ink-3 focus:outline-none max-h-[200px] scroll-thin leading-6"
       />
-      {micSlot}
+      {micSlot?.((t) => setText((cur) => (cur.trim() ? `${cur.trimEnd()} ${t}` : t)))}
       {onCall && (
         <button
           className="icon-btn size-10"

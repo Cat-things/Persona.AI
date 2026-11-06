@@ -17,7 +17,7 @@ updated, and a commit.
 | 4 | Installer (Docker, then native) | done (native mode untested on a real host, see log) |
 | 5 | Avatar generation | done |
 | 6 | TTS voices + playback | done |
-| 7 | Calls (STT + streaming pipeline + barge-in) | pending |
+| 7 | Calls (STT + streaming pipeline + barge-in) | done (browser call path not yet run against a real mic) |
 | 8 | Group chats, personas, card import/export | pending |
 | 9 | Mobile app (Expo) | pending |
 | 10 | Windows/macOS installer polish, CI, docs | pending |
@@ -218,3 +218,15 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
   reply, auto-play toggle (chat header + settings), voice picker with browse/filter/preview
   and clone form. Verified real in-process Kokoro here (54 voices, 2.7 s speech in 1.2 s
   on CPU). 62 tests.
+- Phase 7: STT providers (faster-whisper in-process with CUDA/CPU auto + fallback,
+  OpenAI-compatible transcription incl. Speaches, mock; Whisper silence hallucinations
+  filtered), adaptive energy VAD (pre-roll, min speech, end-of-utterance silence, stricter
+  barge-in mode), call session over `/ws/call` (PCM16 16 kHz in, 24 kHz out in 100 ms
+  frames): VAD -> STT -> transcript saved as chat messages -> streamed LLM -> sentence
+  chunker (first chunk cut early at a comma) -> TTS per sentence while the LLM keeps
+  going; live partial transcripts for local STT; barge-in and tap-to-interrupt cancel
+  LLM + TTS, flush client playback and trim the saved reply to what was heard; latency
+  metrics (stt, first token, first audio). `/stt` upload for dictation. Web: AudioWorklet
+  capture + resampler, gapless scheduled playback, call screen (avatar ring reacting to
+  speech, timer, live transcript, mute, hang up), composer mic dictation, call button.
+  70 server tests incl. end-to-end call and barge-in over a real WebSocket.
