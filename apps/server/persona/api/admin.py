@@ -179,3 +179,17 @@ async def delete_invite(code: str, db: DB, _: AdminUser) -> None:
     if inv:
         await db.delete(inv)
         await db.commit()
+
+
+@router.get("/doctor")
+async def doctor(_: AdminUser) -> list[dict]:
+    from persona.services.doctor import run_checks
+
+    return await run_checks()
+
+
+@router.get("/llm-models")
+async def llm_models(db: DB, _: AdminUser) -> list[str]:
+    from persona.services.llm.base import list_models
+
+    return await list_models(await settings_store.load(db, fresh=True))

@@ -1,0 +1,289 @@
+@import "@fontsource-variable/figtree";
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------- tokens (see DESIGN.md) ---------- */
+:root,
+[data-theme="dark"] {
+  --bg: oklch(0.17 0.018 275);
+  --panel: oklch(0.2 0.022 275);
+  --surface: oklch(0.235 0.024 275);
+  --surface-2: oklch(0.28 0.026 275);
+  --line: oklch(0.32 0.022 275);
+  --ink: oklch(0.95 0.008 275);
+  --ink-2: oklch(0.78 0.014 275);
+  --ink-3: oklch(0.66 0.016 275);
+  --ember: oklch(0.72 0.17 40);
+  --ember-hover: oklch(0.77 0.15 42);
+  --ember-ink: oklch(0.19 0.03 40);
+  --ember-soft: oklch(0.72 0.17 40 / 0.14);
+  --user-bubble: oklch(0.31 0.05 275);
+  --ok: oklch(0.76 0.14 155);
+  --warn: oklch(0.82 0.14 85);
+  --err: oklch(0.7 0.18 25);
+  --star: oklch(0.83 0.15 80);
+  --shadow: 0 12px 40px oklch(0.08 0.02 275 / 0.55);
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: oklch(0.985 0.004 275);
+  --panel: oklch(0.955 0.008 275);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.93 0.01 275);
+  --line: oklch(0.88 0.012 275);
+  --ink: oklch(0.22 0.02 275);
+  --ink-2: oklch(0.42 0.02 275);
+  --ink-3: oklch(0.52 0.02 275);
+  --ember: oklch(0.6 0.19 38);
+  --ember-hover: oklch(0.55 0.19 36);
+  --ember-ink: oklch(1 0 0);
+  --ember-soft: oklch(0.6 0.19 38 / 0.1);
+  --user-bubble: oklch(0.91 0.035 275);
+  --ok: oklch(0.55 0.14 155);
+  --warn: oklch(0.6 0.14 75);
+  --err: oklch(0.55 0.2 25);
+  --star: oklch(0.7 0.16 70);
+  --shadow: 0 12px 40px oklch(0.3 0.02 275 / 0.18);
+  color-scheme: light;
+}
+
+@theme {
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ember: var(--ember);
+  --color-ember-hover: var(--ember-hover);
+  --color-ember-ink: var(--ember-ink);
+  --color-ember-soft: var(--ember-soft);
+  --color-user-bubble: var(--user-bubble);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-err: var(--err);
+  --color-star: var(--star);
+  --radius-control: 10px;
+  --radius-card: 16px;
+  --radius-bubble: 22px;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --text-body: 0.9375rem;
+  /* z-index scale */
+  --z-sticky: 10;
+  --z-drawer: 30;
+  --z-menu: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ember);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--ember-soft);
+  }
+}
+
+/* ---------- component primitives (Tailwind v4 utilities so they compose) ---------- */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-control px-4 h-10 text-sm font-semibold
+    transition-[background-color,color,opacity] duration-150 ease-out-quart select-none
+    disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap;
+}
+@utility btn-primary {
+  @apply btn bg-ember text-ember-ink hover:bg-ember-hover;
+}
+@utility btn-secondary {
+  @apply btn bg-surface-2 text-ink hover:bg-line;
+}
+@utility btn-ghost {
+  @apply btn text-ink-2 hover:bg-surface-2 hover:text-ink;
+}
+@utility btn-danger {
+  @apply btn bg-err text-white hover:opacity-90;
+}
+@utility icon-btn {
+  @apply inline-flex items-center justify-center size-9 rounded-full text-ink-2
+    transition-colors duration-150 hover:bg-surface-2 hover:text-ink
+    disabled:opacity-40 disabled:pointer-events-none;
+}
+@utility field {
+  @apply w-full rounded-control bg-surface-2 border border-transparent px-3 py-2.5 text-ink
+    placeholder:text-ink-3 transition-colors duration-150
+    focus:outline-none focus:border-ember focus:bg-surface;
+}
+@utility label {
+  @apply block text-sm font-semibold text-ink mb-1.5;
+}
+@utility hint {
+  @apply text-xs text-ink-3 mt-1;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1 rounded-full px-3 h-8 text-sm font-medium bg-surface-2 text-ink-2
+    hover:text-ink transition-colors duration-150 whitespace-nowrap disabled:opacity-50;
+  &[aria-pressed="true"] {
+    @apply bg-ink text-bg;
+  }
+}
+@utility menu {
+  @apply rounded-xl bg-surface border border-line p-1.5 min-w-48;
+  box-shadow: var(--shadow);
+}
+@utility menu-item {
+  @apply flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-ink hover:bg-surface-2 text-left
+    disabled:opacity-50 disabled:pointer-events-none;
+}
+
+/* streaming caret */
+.caret::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  border-radius: 2px;
+  background: var(--ember);
+  animation: caret 1s steps(2, start) infinite;
+}
+@keyframes caret {
+  to {
+    visibility: hidden;
+  }
+}
+
+.typing-dot {
+  animation: typing 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.fade-in {
+  animation: fade-in 180ms var(--ease-out-quart) both;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.swipe-in-left {
+  animation: swipe-left 180ms var(--ease-out-quart) both;
+}
+.swipe-in-right {
+  animation: swipe-right 180ms var(--ease-out-quart) both;
+}
+@keyframes swipe-left {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+@keyframes swipe-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* chat prose */
+.chat-text {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.chat-text em {
+  color: var(--ink-2);
+}
+.chat-text strong {
+  font-weight: 650;
+}
+.chat-text code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.875em;
+  background: var(--surface-2);
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+  .caret::after {
+    animation: none;
+  }
+}

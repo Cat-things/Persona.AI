@@ -13,7 +13,7 @@ updated, and a commit.
 | 0 | Plan | done |
 | 1 | Backend skeleton, auth, DB, characters CRUD | done |
 | 2 | Chat: streaming LLM, swipes, ratings, memory | done |
-| 3 | Web frontend: discover, chat, create character | pending |
+| 3 | Web frontend: discover, chat, create character | done |
 | 4 | Installer (Docker, then native) | pending |
 | 5 | Avatar generation | pending |
 | 6 | TTS voices + playback | pending |
@@ -167,3 +167,16 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
   output content filter, partial reply kept on stop), REST + SSE endpoints and a chat
   WebSocket (`/api/v1/ws/chat`, short-lived ws-token, origin check, stop/cancel).
   Room turn-taking logic is in the engine (UI/API wiring in phase 8). 43 tests.
+- Phase 3: `packages/shared` (typed API client with single-flight token refresh, auto-
+  reconnecting ChatSocket, formatting helpers), web app (React 19, react-router 8, TanStack
+  Query, Tailwind v4, PWA via vite-plugin-pwa). Screens: login/register/first-run setup,
+  Discover (greeting, continue-chatting row, featured + trending rails, sort chips, tag chips,
+  search, infinite grid), chat (streaming bubbles with caret, typing dots, swipes with
+  counter and keyboard arrows, regenerate on swipe-right past the end, 1-4 star rating, edit,
+  delete, rewind, pin, report, memory modal, chat threads modal, stop button, drafts saved
+  per chat, load older on scroll), character page, character editor (avatar upload, tags,
+  visibility, advanced definition/personality/scenario/model/temperature), profile,
+  settings, admin (overview + health, providers, instance + content filter, users,
+  characters, reports, invites). PRODUCT.md + DESIGN.md capture the design system (Ember
+  coral on indigo-tinted dark, Figtree). Playwright smoke test (desktop + mobile).
+  Server serves `apps/web/dist` at `/` when built.

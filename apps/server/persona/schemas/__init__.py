@@ -69,6 +69,7 @@ class UserPublic(ORM):
 class UserMe(UserPublic):
     email: str | None
     is_admin: bool
+    is_active: bool
     preferences: dict[str, Any]
     created_at: datetime
 
