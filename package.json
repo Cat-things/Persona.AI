@@ -1,0 +1,15 @@
+{
+  "name": "persona-ai",
+  "private": true,
+  "packageManager": "pnpm@12.17.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @persona/web dev",
+    "build:web": "pnpm --filter @persona/web build",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write .",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}
