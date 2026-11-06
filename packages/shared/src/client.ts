@@ -349,10 +349,13 @@ export class PersonaClient {
     return this.upload("/stt", file) as Promise<unknown> as Promise<{ text: string }>;
   }
   capabilities = () =>
-    this.request<{ tts: boolean; stt: boolean; image: boolean; calls: boolean }>(
-      "GET",
-      "/capabilities",
-    );
+    this.request<{
+      tts: boolean;
+      stt: boolean;
+      image: boolean;
+      calls: boolean;
+      voice_cloning: boolean;
+    }>("GET", "/capabilities");
 
   // ---------- reports ----------
   report = (target_type: Report["target_type"], target_id: string, reason: string) =>

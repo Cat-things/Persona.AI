@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     tts_provider: str = "kokoro"  # kokoro | piper | xtts | elevenlabs | none
     tts_base_url: str = ""
     tts_api_key: str = ""
+    tts_model: str = ""
     kokoro_model_path: str = ""
     kokoro_voices_path: str = ""
     piper_binary: str = "piper"

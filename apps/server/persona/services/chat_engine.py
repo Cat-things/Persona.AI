@@ -240,6 +240,13 @@ async def generate(
     await db.refresh(msg)
     yield {"type": "done", "message": message_out(msg), "filtered": finish == "filtered"}
 
+    if (user.preferences or {}).get("autoplay_voice") and (
+        cfg.get("tts_provider") or "none"
+    ) != "none":
+        from persona.services import jobs
+
+        await jobs.enqueue(db, "tts_prerender", {"message_id": msg.id}, user_id=user.id)
+
     covers = summary.covers_until if summary else -1
     if memory.needs_summary(prompt.first_included_position, covers):
         memory.schedule(chat.id, prompt.first_included_position or 0)
