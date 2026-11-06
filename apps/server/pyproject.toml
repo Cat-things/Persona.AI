@@ -1,0 +1,59 @@
+[project]
+name = "persona"
+version = "0.1.0"
+description = "Persona.AI server: self-hostable AI character chat"
+requires-python = ">=3.12"
+license = "AGPL-3.0-or-later"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "sqlalchemy[asyncio]>=2.0.30",
+  "aiosqlite>=0.20",
+  "alembic>=1.13",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "argon2-cffi>=23.1",
+  "pyjwt>=2.8",
+  "httpx>=0.27",
+  "python-multipart>=0.0.9",
+  "pillow>=10.3",
+  "typer>=0.12",
+]
+
+[project.optional-dependencies]
+postgres = ["asyncpg>=0.29"]
+redis = ["redis>=5.0"]
+tts = ["kokoro-onnx>=0.4", "soundfile>=0.12"]
+stt = ["faster-whisper>=1.0"]
+tokens = ["tiktoken>=0.7"]
+
+[project.scripts]
+persona = "persona.cli:app"
+
+[dependency-groups]
+dev = ["pytest>=8.2", "pytest-asyncio>=0.23", "ruff>=0.5", "asgi-lifespan>=2.1"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["persona"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "S"]
+ignore = ["S101", "B008", "S311", "S105", "S110", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S106", "S107"]
+"persona/migrations/*" = ["E501", "I001"]

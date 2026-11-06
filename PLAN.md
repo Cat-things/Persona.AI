@@ -11,7 +11,7 @@ updated, and a commit.
 | # | Phase | Status |
 |---|-------|--------|
 | 0 | Plan | done |
-| 1 | Backend skeleton, auth, DB, characters CRUD | pending |
+| 1 | Backend skeleton, auth, DB, characters CRUD | done |
 | 2 | Chat: streaming LLM, swipes, ratings, memory | pending |
 | 3 | Web frontend: discover, chat, create character | pending |
 | 4 | Installer (Docker, then native) | pending |
@@ -150,3 +150,11 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
 ## Progress log
 
 - Phase 0: PLAN.md written.
+- Phase 1: FastAPI app factory, async SQLAlchemy (SQLite WAL / Postgres), Alembic (migrations
+  live in `persona/migrations`, run automatically by `persona serve`), all core tables, argon2
+  auth with rotating refresh tokens + reuse detection, invite-only mode, first-user-admin,
+  rate limiting (memory/Redis), characters CRUD + discover (popular/trending/recent/featured,
+  search, tags, likes), image upload validation (magic bytes + Pillow re-encode to WebP),
+  content filter (always-on minors rule + configurable categories), admin API (stats, users,
+  characters, reports, invites, provider settings with masked secrets), DB job queue + worker,
+  `persona` CLI (serve, worker, migrate, create-admin, doctor). 20 pytest tests.
