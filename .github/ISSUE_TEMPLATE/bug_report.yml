@@ -1,0 +1,52 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Security problems go to SECURITY.md instead, please.
+        Running `./install.sh doctor` first often pinpoints the cause.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a chat with ...
+        2. Swipe right on ...
+        3. See error ...
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install mode
+      options: [Docker, Native (Linux), Native (macOS), Windows, Development checkout]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "0.1.0 or a commit hash (shown at /api/v1/health)"
+  - type: input
+    id: providers
+    attributes:
+      label: AI providers in use
+      placeholder: "e.g. Ollama llama3.1:8b, Kokoro, faster-whisper small"
+  - type: input
+    id: client
+    attributes:
+      label: Browser / device
+      placeholder: "e.g. Firefox 140 on Ubuntu, Android app on Pixel 8"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or doctor output
+      description: "`./install.sh doctor`, `docker compose logs persona`, or `journalctl -u persona`. Remove any secrets."
+      render: shell

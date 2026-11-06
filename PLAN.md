@@ -17,7 +17,7 @@ updated, and a commit.
 | 4 | Installer (Docker, then native) | done (native mode untested on a real host, see log) |
 | 5 | Avatar generation | done |
 | 6 | TTS voices + playback | done |
-| 7 | Calls (STT + streaming pipeline + barge-in) | done (browser call path not yet run against a real mic) |
+| 7 | Calls (STT + streaming pipeline + barge-in) | done |
 | 8 | Group chats, personas, card import/export | pending |
 | 9 | Mobile app (Expo) | pending |
 | 10 | Windows/macOS installer polish, CI, docs | pending |
@@ -141,7 +141,7 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
 
 ## Open questions
 
-1. License: AGPL-3.0 chosen; confirm or switch.
+1. License: AGPL-3.0 chosen (LICENSE added); confirm or switch.
 2. Should public characters be visible to logged-out visitors? Default: no, login required.
 3. Expo push needs internet access from the server; fully offline instances just won't get push.
 4. XTTS-v2 is under the Coqui Public Model License (non-commercial). It is optional and off by
@@ -229,4 +229,12 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
   metrics (stt, first token, first audio). `/stt` upload for dictation. Web: AudioWorklet
   capture + resampler, gapless scheduled playback, call screen (avatar ring reacting to
   speech, timer, live transcript, mute, hang up), composer mic dictation, call button.
-  70 server tests incl. end-to-end call and barge-in over a real WebSocket.
+  70 server tests incl. end-to-end call and barge-in over a real WebSocket. Browser call
+  path verified in Chromium with a fake microphone (capture -> VAD -> STT -> LLM -> TTS ->
+  playback, live transcript); not yet tried with real speech and real models.
+- Repo housekeeping (requested mid-phase): README (features, quickstart with read-first
+  link, hardware table, troubleshooting, screenshots from real runs), LICENSE (AGPL-3.0),
+  SECURITY.md (GitHub private advisories), CONTRIBUTING.md, CODE_OF_CONDUCT.md (Contributor
+  Covenant 2.1), CHANGELOG.md, issue forms, PR template, Dependabot, .editorconfig,
+  .env.example, docs/ (install, configuration, providers, architecture, development,
+  troubleshooting, mobile stub).
