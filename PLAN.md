@@ -12,7 +12,7 @@ updated, and a commit.
 |---|-------|--------|
 | 0 | Plan | done |
 | 1 | Backend skeleton, auth, DB, characters CRUD | done |
-| 2 | Chat: streaming LLM, swipes, ratings, memory | pending |
+| 2 | Chat: streaming LLM, swipes, ratings, memory | done |
 | 3 | Web frontend: discover, chat, create character | pending |
 | 4 | Installer (Docker, then native) | pending |
 | 5 | Avatar generation | pending |
@@ -158,3 +158,12 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
   content filter (always-on minors rule + configurable categories), admin API (stats, users,
   characters, reports, invites, provider settings with masked secrets), DB job queue + worker,
   `persona` CLI (serve, worker, migrate, create-admin, doctor). 20 pytest tests.
+- Phase 2: LLM adapters (OpenAI-compatible SSE, Anthropic Messages adapter, `mock` provider
+  for demos/tests; per-character model override restricted to the admin's `llm_models` list),
+  token-budgeted prompt builder (core > pinned > summary > first example > history > other
+  examples), rolling summarization in-process (per-chat lock, chunked for small windows),
+  chat engine (greeting, streaming, swipes as candidates, regenerate latest only, edit,
+  delete / rewind, 1-4 star ratings, pin to memory, manual memories, multiple threads,
+  output content filter, partial reply kept on stop), REST + SSE endpoints and a chat
+  WebSocket (`/api/v1/ws/chat`, short-lived ws-token, origin check, stop/cancel).
+  Room turn-taking logic is in the engine (UI/API wiring in phase 8). 43 tests.

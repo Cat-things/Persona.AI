@@ -11,6 +11,7 @@ os.environ.update(
         "DATA_DIR": _tmp,
         "DATABASE_URL": f"sqlite+aiosqlite:///{_tmp}/test.db",
         "LLM_BASE_URL": "http://llm.invalid/v1",
+        "LLM_PROVIDER": "mock",
         "TTS_PROVIDER": "none",
         "STT_PROVIDER": "none",
         "RL_AUTH_PER_MIN": "1000",
@@ -69,3 +70,35 @@ async def admin(client):
 async def alice(client, admin):
     headers, _ = await register(client, "alice")
     return headers
+
+
+@pytest.fixture(autouse=True)
+def _fast_mock(monkeypatch):
+    from persona.services.llm import base
+
+    monkeypatch.setattr(base, "MOCK_DELAY", 0)
+
+
+def sse_events(text: str) -> list[dict]:
+    import json
+
+    out = []
+    for line in text.splitlines():
+        if line.startswith("data: ") and line != "data: [DONE]":
+            out.append(json.loads(line[6:]))
+    return out
+
+
+async def make_character(client, headers, **over):
+    body = {
+        "name": "Captain Vela",
+        "tagline": "Starship captain",
+        "description": "A veteran captain.",
+        "greeting": "Welcome aboard, {{user}}.",
+        "definition": "{{user}}: Hi\n{{char}}: *nods* Hello.",
+        "tags": ["sci-fi"],
+        **over,
+    }
+    r = await client.post("/api/v1/characters", json=body, headers=headers)
+    assert r.status_code == 201, r.text
+    return r.json()
