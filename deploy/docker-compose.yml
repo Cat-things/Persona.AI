@@ -1,0 +1,104 @@
+# Persona.AI. Managed by install.sh; settings live in .env next to this file.
+# Profiles (set COMPOSE_PROFILES in .env):
+#   core       Persona.AI server + background worker
+#   llm        Ollama (CPU, or GPU when docker-compose.nvidia.yml / .amd.yml is included)
+#   image-gen  ComfyUI for avatar generation
+#   tts        Kokoro TTS (OpenAI-compatible speech API)
+#   stt        Speaches / faster-whisper (OpenAI-compatible transcription API)
+#   proxy      Caddy reverse proxy with automatic HTTPS
+#   redis      Redis for shared rate limits and instant job wake-ups
+# GPU passthrough is added by including docker-compose.nvidia.yml or docker-compose.amd.yml
+# in COMPOSE_FILE (the installer does this when it finds a GPU). The `gpu` profile name is
+# kept as an alias in COMPOSE_PROFILES for readability; GPU devices come from the overlay.
+
+name: persona
+
+x-persona: &persona
+  image: ${PERSONA_IMAGE:-ghcr.io/cat-things/persona-server:latest}
+  env_file: .env
+  environment:
+    DATA_DIR: /data
+    HOST: 0.0.0.0
+    PORT: "8000"
+  volumes:
+    - ./data:/data
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  restart: unless-stopped
+
+services:
+  persona:
+    <<: *persona
+    profiles: [core]
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  worker:
+    <<: *persona
+    profiles: [core]
+    command: ["persona", "worker"]
+    healthcheck:
+      disable: true
+    depends_on:
+      persona:
+        condition: service_healthy
+
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    profiles: [llm]
+    volumes:
+      - ./ollama:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+    restart: unless-stopped
+
+  comfyui:
+    image: ${COMFYUI_IMAGE:-yanwk/comfyui-boot:cpu}
+    profiles: [image-gen]
+    volumes:
+      - ./comfyui:/root
+    environment:
+      CLI_ARGS: ${COMFYUI_ARGS:-}
+    restart: unless-stopped
+
+  kokoro:
+    image: ${KOKORO_IMAGE:-ghcr.io/remsky/kokoro-fastapi-cpu:latest}
+    profiles: [tts]
+    restart: unless-stopped
+
+  stt:
+    image: ${STT_IMAGE:-ghcr.io/speaches-ai/speaches:latest-cpu}
+    profiles: [stt]
+    volumes:
+      - ./stt-cache:/home/ubuntu/.cache/huggingface
+    environment:
+      WHISPER__TTL: "-1"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: [proxy]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/data:/data
+      - ./caddy/config:/config
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    profiles: [redis]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped

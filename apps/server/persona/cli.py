@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import getpass
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -123,6 +124,68 @@ def create_admin(
             return verb
 
     typer.echo(f"{asyncio.run(_go())} admin '{username}'.")
+
+
+@app.command()
+def backup(
+    out: Path = typer.Option(None, help="Output .tar.gz (default: DATA_DIR/backups/<timestamp>)"),
+    env_file: Path = typer.Option(None, help="Include this env file (contains secrets)"),
+) -> None:
+    """Back up the database and media (safe while running)."""
+    from datetime import datetime
+
+    from persona.core.config import get_settings
+    from persona.services.backup import create_backup
+
+    if str(out) == "-":  # stream to stdout (used by the installer through `docker compose exec`)
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = create_backup(Path(tmp) / "backup.tar.gz", env_file)
+            with path.open("rb") as f:
+                shutil.copyfileobj(f, sys.stdout.buffer)
+            sys.stdout.buffer.flush()
+        return
+    if out is None:
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        out = get_settings().data_dir / "backups" / f"persona-{stamp}.tar.gz"
+    path = create_backup(out, env_file)
+    typer.echo(str(path))
+
+
+@app.command()
+def restore(
+    archive: Path,
+    env_target: Path = typer.Option(None, help="Write the backed-up env file here"),
+    yes: bool = typer.Option(False, "--yes", help="Don't ask for confirmation"),
+) -> None:
+    """Restore a backup. Stop the server first; current data is replaced."""
+    from persona.services.backup import restore_backup
+
+    if not yes and not typer.confirm("This replaces the current database and media. Continue?"):
+        raise typer.Exit(1)
+    if str(archive) == "-":  # read the archive from stdin
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            staged = Path(tmp) / "restore.tar.gz"
+            with staged.open("wb") as f:
+                shutil.copyfileobj(sys.stdin.buffer, f)
+            manifest = restore_backup(staged, env_target)
+    else:
+        manifest = restore_backup(archive, env_target)
+    run_migrations()
+    typer.echo(f"Restored backup from {manifest.get('created_at')} (v{manifest.get('version')}).")
+
+
+@app.command("seed-demo")
+def seed_demo() -> None:
+    """Add a few original sample characters (for trying the app out)."""
+    from persona.services.seed import seed
+
+    run_migrations()
+    n = asyncio.run(seed())
+    typer.echo(f"Added {n} sample characters." if n else "Sample characters already exist.")
 
 
 @app.command()

@@ -1,0 +1,14 @@
+**/node_modules
+**/.venv
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/test-results
+**/playwright-report
+apps/mobile
+data
+backups
+.git
+*.db
+.env

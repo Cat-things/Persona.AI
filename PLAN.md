@@ -14,7 +14,7 @@ updated, and a commit.
 | 1 | Backend skeleton, auth, DB, characters CRUD | done |
 | 2 | Chat: streaming LLM, swipes, ratings, memory | done |
 | 3 | Web frontend: discover, chat, create character | done |
-| 4 | Installer (Docker, then native) | pending |
+| 4 | Installer (Docker, then native) | done (native mode untested on a real host, see log) |
 | 5 | Avatar generation | pending |
 | 6 | TTS voices + playback | pending |
 | 7 | Calls (STT + streaming pipeline + barge-in) | pending |
@@ -180,3 +180,21 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
   characters, reports, invites). PRODUCT.md + DESIGN.md capture the design system (Ember
   coral on indigo-tinted dark, Figtree). Playwright smoke test (desktop + mobile).
   Server serves `apps/web/dist` at `/` when built.
+- Phase 4: `deploy/Dockerfile` (multi-stage: web build + uv venv, non-root uid 10001,
+  optional `EXTRAS="tts stt"`), `deploy/docker-compose.yml` with profiles core / llm /
+  image-gen / tts / stt / proxy / redis plus `docker-compose.nvidia.yml` and
+  `docker-compose.amd.yml` GPU overlays (selected via COMPOSE_FILE in .env), Caddyfile.
+  In Docker mode TTS/STT use the Kokoro-FastAPI and Speaches containers through their
+  OpenAI-compatible APIs; native mode runs Kokoro/faster-whisper in-process.
+  `install.sh`: interactive menu + flags, OS/distro/arch/GPU/VRAM detection, model
+  recommendation from VRAM/RAM, Docker + compose + NVIDIA toolkit setup, native mode
+  (system user, uv venv, private Node for the web build, hardened systemd units / launchd
+  agents, native Ollama, optional native ComfyUI + DreamShaper 8 checkpoint, Caddy),
+  secrets generated into a 600 env file and never printed, idempotent re-runs (secrets and
+  edits kept), localhost-only binding unless a domain (Caddy) or `--lan` is given, firewall
+  hints, subcommands update / backup / restore / uninstall [--purge] / doctor / status.
+  `persona backup|restore` (CLI, streams via stdout/stdin for containers), `persona
+  seed-demo`. Tested here: image build, container run, full `install.sh --docker` cycle
+  (install, idempotent re-run, doctor, update, backup, restore, uninstall --purge) on
+  rootless podman. Not yet exercised on a real host: native mode (needs root + systemd),
+  GPU containers, ComfyUI/Kokoro/Speaches profiles, Caddy with a real domain, macOS.

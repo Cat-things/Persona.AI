@@ -1,0 +1,11 @@
+# AMD GPU passthrough (ROCm). Ollama uses the :rocm image; set OLLAMA_IMAGE=ollama/ollama:rocm.
+x-rocm: &rocm
+  devices:
+    - /dev/kfd
+    - /dev/dri
+  group_add:
+    - video
+    - render
+
+services:
+  ollama: *rocm
