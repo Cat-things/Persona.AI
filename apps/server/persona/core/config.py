@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     stt_api_key: str = ""
 
     content_filter: bool = True
+    # Process background jobs inside the API process too (claims are atomic, so running a
+    # separate `persona worker` as well is safe). The installer turns this off.
+    embedded_worker: bool = True
 
     @field_validator("cors_origins", mode="before")
     @classmethod

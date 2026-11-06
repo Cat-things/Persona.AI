@@ -15,7 +15,7 @@ updated, and a commit.
 | 2 | Chat: streaming LLM, swipes, ratings, memory | done |
 | 3 | Web frontend: discover, chat, create character | done |
 | 4 | Installer (Docker, then native) | done (native mode untested on a real host, see log) |
-| 5 | Avatar generation | pending |
+| 5 | Avatar generation | done |
 | 6 | TTS voices + playback | pending |
 | 7 | Calls (STT + streaming pipeline + barge-in) | pending |
 | 8 | Group chats, personas, card import/export | pending |
@@ -198,3 +198,12 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
   (install, idempotent re-run, doctor, update, backup, restore, uninstall --purge) on
   rootless podman. Not yet exercised on a real host: native mode (needs root + systemd),
   GPU containers, ComfyUI/Kokoro/Speaches profiles, Caddy with a real domain, macOS.
+- Phase 5: image providers (ComfyUI with a built-in txt2img workflow or an admin-supplied
+  API workflow with %prompt%/%negative%/%seed%/%batch% placeholders and auto checkpoint
+  pick, AUTOMATIC1111/Forge, OpenAI-compatible images, fal.ai, offline mock), six style
+  presets, LLM-written visual prompt from the character description, `avatar` job (4
+  images re-encoded to WebP, owner notified in-app + Expo push), `/jobs/{id}` polling,
+  embedded job loop in the API process (`EMBEDDED_WORKER`, off when the installer runs a
+  dedicated worker). Web: generator modal (prompt, write-from-description, styles,
+  generate 4, pick) and a circular pan/zoom cropper (pointer, wheel, keyboard) exporting
+  a 512px square. 53 tests.

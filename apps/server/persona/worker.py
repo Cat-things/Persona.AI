@@ -92,3 +92,15 @@ async def run_worker(concurrency: int = 2) -> None:
     waiter = asyncio.create_task(_waiter(wake))
     await asyncio.gather(*(_loop(stop, wake) for _ in range(concurrency)))
     waiter.cancel()
+
+
+async def embedded_loop() -> None:
+    """Single job loop inside the API process (no signal handling, no stale requeue)."""
+    load_handlers()
+    stop, wake = asyncio.Event(), asyncio.Event()
+    try:
+        await _loop(stop, wake)
+    except asyncio.CancelledError:
+        pass
+    except Exception:  # noqa: BLE001
+        log.exception("embedded worker crashed")

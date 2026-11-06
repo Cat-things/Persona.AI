@@ -391,6 +391,7 @@ function Providers() {
                 ["a1111", "AUTOMATIC1111 / Forge (local)"],
                 ["openai", "OpenAI-compatible images API"],
                 ["fal", "fal.ai"],
+                ["mock", "Demo (placeholder images)"],
               ]}
             />
             <TextSetting

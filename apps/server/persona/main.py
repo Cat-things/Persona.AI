@@ -74,7 +74,16 @@ async def lifespan(app: FastAPI):
                 await create_all()
         else:
             await create_all()
+    worker_task = None
+    if s.embedded_worker and not s.is_test:
+        import asyncio
+
+        from persona.worker import embedded_loop
+
+        worker_task = asyncio.create_task(embedded_loop())
     yield
+    if worker_task:
+        worker_task.cancel()
 
 
 def create_app() -> FastAPI:

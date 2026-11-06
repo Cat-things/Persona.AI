@@ -818,6 +818,7 @@ wait_healthy() {
 write_common_env() {
   env_default SECRET_KEY "$(gen_secret)"
   env_default ENVIRONMENT production
+  env_set EMBEDDED_WORKER false   # a dedicated worker service runs jobs
   env_set PUBLIC_URL "$([[ -n "$DOMAIN" ]] && echo "https://$DOMAIN" || echo "http://localhost:$PORT")"
   if [[ -n "$DOMAIN" ]]; then env_set CORS_ORIGINS "https://$DOMAIN"; fi
   case "$LLM" in
