@@ -55,3 +55,38 @@ test("create a character, chat, swipe and rate", async ({ page }, info) => {
     page.getByRole("heading", { name: `Navigator ${info.project.name}` }).first(),
   ).toBeVisible();
 });
+
+test("persona and group room", async ({ page }, info) => {
+  const user = `rooms_${info.project.name}`;
+  await signIn(page, user);
+
+  for (const n of ["Alder", "Briar"]) {
+    await page.goto("/create");
+    await page.fill("#name", `${n} ${info.project.name}`);
+    await page.fill("#greeting", `${n} waves at {{user}}.`);
+    await page.getByRole("button", { name: "Create character" }).click();
+    await page.waitForURL(/\/chat\//);
+  }
+
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "New persona" }).click();
+  await page.fill("#pn", "Wren");
+  await page.getByLabel("Use for new chats").check();
+  await page.getByRole("button", { name: "Create persona" }).click();
+  await expect(page.getByText("Default")).toBeVisible();
+
+  await page.goto("/rooms/new");
+  await page.fill("#rn", "Campfire");
+  await page.getByRole("button", { name: new RegExp(`Alder ${info.project.name}`) }).click();
+  await page.getByRole("button", { name: new RegExp(`Briar ${info.project.name}`) }).click();
+  await page.getByRole("button", { name: "Create room" }).click();
+  await page.waitForURL(/\/chat\//);
+  const main = page.getByRole("main");
+  await expect(main.getByText("Alder waves at Wren.")).toBeVisible();
+
+  await page.fill("#composer", "Briar, tell a story");
+  await page.getByRole("button", { name: "Send message" }).click();
+  // Briar was named, so Briar answers; the room prompt labels the user by persona.
+  await expect(main.getByText(`Briar ${info.project.name} considers your words.`)).toBeVisible();
+  await expect(main.getByText('You said "Wren: Briar, tell a story"').first()).toBeVisible();
+});

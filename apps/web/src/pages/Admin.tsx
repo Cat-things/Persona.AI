@@ -279,7 +279,7 @@ function ModelList({
       <textarea
         id="llm_models"
         className="field font-mono text-sm min-h-20"
-        placeholder={"mistral-nemo:12b\nqwen2.5:14b|32768"}
+        placeholder={"gemma3:12b\npersona-rp|8192"}
         value={text}
         onChange={(e) => {
           setText(e.target.value);

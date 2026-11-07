@@ -16,6 +16,7 @@ export interface Preferences {
   default_persona_id?: string | null;
   reduce_motion?: boolean;
   language?: string;
+  training_opt_in?: boolean;
 }
 
 export interface UserMe extends UserPublic {

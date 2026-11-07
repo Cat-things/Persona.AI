@@ -1,8 +1,9 @@
 import type { Character, ChatEvent, Message, Room } from "@persona/shared";
-import { Loader2, MessageSquarePlus, Square, Volume2, VolumeX } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { Loader2, MessageSquarePlus, Square, UserRound, Volume2, VolumeX } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { MicButton } from "../components/MicButton";
+import { PersonaPicker, usePersonas } from "../components/Personas";
 import type { useChatSession } from "../hooks/useChatSession";
 import { api, chatSocket } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -16,6 +17,7 @@ export interface ChatExtras {
   aboveComposer?: ReactNode;
   micSlot?: (append: (text: string) => void) => ReactNode;
   onCall?: () => void;
+  overlay?: ReactNode;
 }
 
 function PlayButton({ m }: { m: Message }) {
@@ -68,7 +70,40 @@ export function useChatExtras({
   useEffect(() => () => voicePlayer.stop(), [chatId]);
 
   const navigate = useNavigate();
+  const toast = useToast();
+  const [pickPersona, setPickPersona] = useState(false);
+  const personas = usePersonas();
+  const personaId = session.detail?.persona_id ?? null;
+  const personaName =
+    personas.data?.find((p) => p.id === personaId)?.name ?? user?.display_name ?? user?.username;
   const extras: ChatExtras = {};
+  extras.menuItems = (close) => (
+    <button
+      className="menu-item"
+      onClick={() => {
+        close();
+        setPickPersona(true);
+      }}
+    >
+      <UserRound size={16} /> Talking as {personaName}
+    </button>
+  );
+  extras.overlay = (
+    <PersonaPicker
+      open={pickPersona}
+      onClose={() => setPickPersona(false)}
+      current={personaId}
+      onPick={async (id) => {
+        try {
+          await api.updateChat(chatId, { persona_id: id });
+          setPickPersona(false);
+          await session.reload();
+        } catch (e) {
+          toast(errorText(e), "error");
+        }
+      }}
+    />
+  );
   if (caps.data?.stt) extras.micSlot = (append) => <MicButton onText={append} />;
   if (caps.data?.calls && !room) extras.onCall = () => navigate(`/call/${chatId}`);
   if (tts) {

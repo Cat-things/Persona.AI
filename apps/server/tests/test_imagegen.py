@@ -190,3 +190,13 @@ async def test_prompt_suggestion_uses_llm(client, alice):
         json={"name": "Vela", "description": "A tall captain with red hair."},
     )
     assert r.status_code == 200 and len(r.json()["prompt"]) > 5
+
+
+def test_sampling_profiles():
+    from persona.services.imagegen.providers import sampling_for
+
+    light = sampling_for("DreamShaperXL_Lightning-SFW.safetensors")
+    assert (light.steps, light.cfg, light.size) == (6, 2.0, 1024)
+    sd15 = sampling_for("DreamShaper_8_pruned.safetensors")
+    assert (sd15.steps, sd15.size) == (25, 768)
+    assert sampling_for("sd_xl_base_1.0.safetensors").size == 1024

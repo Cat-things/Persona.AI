@@ -33,7 +33,9 @@ mode and points the containers at it.
   --model NAME               Ollama model to pull (default: picked from VRAM/RAM)
   --gpu auto|nvidia|amd|none
   --image-gen comfyui|none   ComfyUI for avatars
-  --checkpoint / --no-checkpoint   download DreamShaper 8 (~2 GB) for ComfyUI
+  --checkpoint / --no-checkpoint   download a starter image model for ComfyUI (checksum-verified)
+  --checkpoint-model sd15|sdxl     DreamShaper 8 (~2 GB) or DreamShaper XL Lightning SFW (~7 GB);
+                                   default: sdxl with 10 GB+ VRAM
   --tts / --no-tts           local voices (Kokoro)
   --stt / --no-stt           local speech recognition (faster-whisper)
   --redis                    Redis for shared rate limits and instant job pickup
@@ -86,4 +88,5 @@ Without `--domain`, Persona.AI binds to `127.0.0.1` only. Ways to reach it from 
 | `restore FILE` | Replace data with a backup (asks first; `--yes` to skip) |
 | `doctor` | Service status plus `persona doctor` checks for DB, disk and every provider |
 | `status` | Container / service status |
+| `export-training [--out DIR]` | Export opted-in users' rated chats for fine-tuning ([training guide](../training/README.md)) |
 | `uninstall [--purge]` | Remove services; `--purge` also deletes data |

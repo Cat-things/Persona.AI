@@ -110,6 +110,17 @@ export class PersonaClient {
     return this.parse<T>(res);
   }
 
+  /** Authenticated binary download (e.g. PNG character cards). */
+  async blob(path: string): Promise<Blob> {
+    let res = await this.raw("GET", path);
+    if (res.status === 401 && (await this.refresh())) res = await this.raw("GET", path);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new ApiError(res.status, errorDetail(safeJson(text)) ?? res.statusText, undefined);
+    }
+    return res.blob();
+  }
+
   private async parse<T>(res: Response): Promise<T> {
     if (res.status === 204) return undefined as T;
     const text = await res.text();
@@ -267,6 +278,7 @@ export class PersonaClient {
   exportCard = (id: string) =>
     this.request<Record<string, unknown>>("GET", `/characters/${id}/card`);
   exportCardPngUrl = (id: string) => this.url(`/characters/${id}/card.png`);
+  exportCardPng = (id: string) => this.blob(`/characters/${id}/card.png`);
   importCard = (file: UploadFile) =>
     this.upload("/characters/import", file) as Promise<unknown> as Promise<Character>;
   models = () => this.request<ModelOption[]>("GET", "/models");
@@ -304,6 +316,7 @@ export class PersonaClient {
     this.request<Persona>("PATCH", `/personas/${id}`, body);
   deletePersona = (id: string) => this.request<void>("DELETE", `/personas/${id}`);
   rooms = () => this.request<Room[]>("GET", "/rooms");
+  room = (id: string) => this.request<Room>("GET", `/rooms/${id}`);
   createRoom = (body: RoomInput) =>
     this.request<Room & { chat_id: string }>("POST", "/rooms", body);
   updateRoom = (id: string, body: Partial<RoomInput>) =>

@@ -298,6 +298,8 @@ async def pick_speakers(
                 or (len(first) > 2 and _word_in(first, low))
             ):
                 chosen.append(c)
+    if room.turn_mode == "manual" and user_text is not None and not chosen:
+        return []  # wait for the user to pick a speaker
     if room.turn_mode == "round_robin" and not chosen:
         last = last_speakers[0] if last_speakers else None
         ids = [c.id for c in members]

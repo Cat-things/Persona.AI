@@ -44,6 +44,8 @@
   llama.cpp, vLLM, OpenRouter, OpenAI) or Anthropic; ComfyUI, AUTOMATIC1111/Forge, OpenAI-compatible
   or fal.ai for images; Kokoro, Piper, XTTS-v2 or ElevenLabs for voices; faster-whisper or a
   Whisper API for speech recognition.
+- **Train your own model**: users can opt in to share rated chats; export them (filtered and
+  scrubbed), fine-tune an open model with LoRA, and load it into Ollama.
 - **Admin panel**: users, characters, reports, invites, provider settings and health checks.
   API keys stay on the server.
 - **Apps**: installable web app (PWA) and an Expo mobile app for Android and iOS.
@@ -101,6 +103,7 @@ A Raspberry Pi 5 (arm64) runs the app itself fine; point it at an LLM elsewhere.
 - [Installation and options](docs/install.md)
 - [Configuration reference](docs/configuration.md)
 - [AI providers](docs/providers.md)
+- [Choosing models](docs/models.md) and [training your own](training/README.md)
 - [Architecture](docs/architecture.md)
 - [Development](docs/development.md)
 - [Mobile app](docs/mobile.md)

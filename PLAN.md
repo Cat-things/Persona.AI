@@ -18,7 +18,7 @@ updated, and a commit.
 | 5 | Avatar generation | done |
 | 6 | TTS voices + playback | done |
 | 7 | Calls (STT + streaming pipeline + barge-in) | done |
-| 8 | Group chats, personas, card import/export | pending |
+| 8 | Group chats, personas, card import/export (+ safe default models, training pipeline) | done |
 | 9 | Mobile app (Expo) | pending |
 | 10 | Windows/macOS installer polish, CI, docs | pending |
 
@@ -128,10 +128,13 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
 | Passwords | argon2id via `argon2-cffi`. |
 | Registration | Open by default; `INVITE_ONLY=true` switches to invite codes. First user becomes admin. |
 | Rate limits | In-memory sliding window (per-process), Redis when `REDIS_URL` set. Auth 10/min/IP, chat 30/min/user, generation 10/min/user. |
-| Default LLM | Ollama at `http://localhost:11434/v1`, model `llama3.1:8b` (CPU) or `mistral-nemo:12b` (≥ 12 GB VRAM) chosen by installer. |
+| Default LLM | Ollama at `http://localhost:11434/v1`. Installer picks an official, safety-tuned instruct model by memory: `gemma3:27b` (20 GB+), `gemma3:12b` (10 GB+), `llama3.1:8b` (6 GB+ or 12 GB RAM), `gemma3:4b`. No uncensored community finetunes as defaults. See docs/models.md. |
 | Default TTS | Kokoro (via `kokoro-onnx`), Piper fallback. |
 | Default STT | faster-whisper `small` (GPU `int8_float16`, CPU `int8`). |
-| Default image gen | None configured; the avatar generator shows setup instructions until an admin configures ComfyUI/A1111/OpenAI/fal. |
+| Default image gen | None unless ComfyUI is chosen in the installer; then a SHA-256-pinned safetensors starter model: DreamShaper XL Lightning **SFW** (10 GB+ VRAM) or DreamShaper 8 (SD 1.5). Sampler settings picked from the checkpoint name. |
+| Card import | V1/V2/V3 JSON or PNG (`chara`/`ccv3` chunk). Imports start **private**; unknown fields kept in `extensions._card` for lossless round trips. Export is creator-only (the definition is private). |
+| Rooms | 2-8 characters, turn modes: natural (default), take turns, you choose. |
+| Training | Opt-in per user (off by default). Learn from replies rated ≥ 3 stars; swipes rated ≥ 2 stars apart become DPO pairs; strict filter (all categories) drops whole conversations; PII + names scrubbed. Base `unsloth/Llama-3.1-8B-Instruct`, rank-16 QLoRA, GGUF q4_k_m to Ollama. |
 | Content filter | On. Blocks sexual content involving minors (always, cannot be disabled), plus configurable categories (explicit sexual, graphic violence, self-harm encouragement) via a keyword/regex layer and a system-prompt guard. Admin can turn off the configurable categories per instance. |
 | Storage | Local disk under `DATA_DIR` (`/var/lib/persona` native, volume in Docker). |
 | Upload limits | Images 8 MB (png/jpeg/webp, verified by magic bytes, re-encoded with Pillow), audio 25 MB (wav/mp3/ogg/webm/m4a). |
@@ -238,3 +241,21 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
   Covenant 2.1), CHANGELOG.md, issue forms, PR template, Dependabot, .editorconfig,
   .env.example, docs/ (install, configuration, providers, architecture, development,
   troubleshooting, mobile stub).
+- Phase 8: personas API (CRUD, exactly one default, mirrored to `preferences.default_persona_id`,
+  media-only avatars), rooms API (2-8 visible characters, create returns the first chat,
+  edit members/order/mode, delete cascades chats; "you choose" mode saves the message and
+  waits for a picked speaker), Character Card import/export (V1/V2/V3, JSON or PNG `chara`/`ccv3`
+  chunks, lossless round trip of unknown fields, limits enforced by truncation, imports
+  start private, export creator-only). Web: personas section in Settings, "Talking as" picker
+  in the chat menu, room editor (`/rooms/new`, `/rooms/:id/edit`) with character search,
+  order and turn mode, card import button in the editor, PNG/JSON export menu.
+  Also (requested): researched defaults and switched to official safety-tuned models
+  (Gemma 3 / Llama 3.1) and a SHA-256-verified SFW image checkpoint chosen by VRAM;
+  model-aware sampler settings (Lightning/Turbo/XL); docs/models.md. Training pipeline:
+  per-user opt-in, `persona export-training` (SFT with per-turn loss weights from star
+  ratings + DPO pairs from rated swipes, strict filter, PII scrub, same system prompt as
+  serving), `persona filter-jsonl` for public datasets, `./install.sh export-training`,
+  `training/train.py` (Unsloth QLoRA, masked loss, optional DPO, GGUF + Modelfile for
+  Ollama). 84 server tests; Playwright 4/4 (adds persona + room flow). `train.py` is not
+  run here (no NVIDIA GPU); its masking logic was checked with a stub tokenizer.
+

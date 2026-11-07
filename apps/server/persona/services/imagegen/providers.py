@@ -77,13 +77,35 @@ def styled(prompt: str, style: str | None, negative: str = "") -> tuple[str, str
     return f"{prompt}, {st['prompt']}", neg
 
 
+@dataclass
+class Sampling:
+    steps: int = 25
+    cfg: float = 6.5
+    sampler: str = "dpmpp_2m"
+    scheduler: str = "karras"
+    size: int = 768
+    a1111_sampler: str = "DPM++ 2M"
+
+
+def sampling_for(model: str) -> Sampling:
+    """Sensible sampler settings from the checkpoint name (few-step models break at 25/6.5)."""
+    m = (model or "").lower()
+    xl = any(k in m for k in ("xl", "sdxl", "illustrious", "pony"))
+    if "lightning" in m or "turbo" in m:
+        return Sampling(6, 2.0, "dpmpp_sde", "karras", 1024 if xl else 768, "DPM++ SDE")
+    if xl:
+        return Sampling(28, 6.0, "dpmpp_2m", "karras", 1024)
+    return Sampling()
+
+
 # ---------- ComfyUI ----------
 def comfy_default_workflow(ckpt: str, req: ImageRequest, seed: int) -> dict[str, Any]:
+    sp = sampling_for(ckpt)
     return {
         "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": ckpt}},
         "5": {
             "class_type": "EmptyLatentImage",
-            "inputs": {"width": req.width, "height": req.height, "batch_size": req.n},
+            "inputs": {"width": sp.size, "height": sp.size, "batch_size": req.n},
         },
         "6": {"class_type": "CLIPTextEncode", "inputs": {"text": req.prompt, "clip": ["4", 1]}},
         "7": {"class_type": "CLIPTextEncode", "inputs": {"text": req.negative, "clip": ["4", 1]}},
@@ -91,10 +113,10 @@ def comfy_default_workflow(ckpt: str, req: ImageRequest, seed: int) -> dict[str,
             "class_type": "KSampler",
             "inputs": {
                 "seed": seed,
-                "steps": 25,
-                "cfg": 6.5,
-                "sampler_name": "dpmpp_2m",
-                "scheduler": "karras",
+                "steps": sp.steps,
+                "cfg": sp.cfg,
+                "sampler_name": sp.sampler,
+                "scheduler": sp.scheduler,
                 "denoise": 1.0,
                 "model": ["4", 0],
                 "positive": ["6", 0],
@@ -191,16 +213,17 @@ async def comfyui(cfg: dict[str, Any], req: ImageRequest) -> list[bytes]:
 # ---------- AUTOMATIC1111 / Forge ----------
 async def a1111(cfg: dict[str, Any], req: ImageRequest) -> list[bytes]:
     base = (cfg.get("image_base_url") or "http://127.0.0.1:7860").rstrip("/")
+    sp = sampling_for(cfg.get("image_model") or "")
     body: dict[str, Any] = {
         "prompt": req.prompt,
         "negative_prompt": req.negative,
         "batch_size": req.n,
         "n_iter": 1,
-        "steps": 25,
-        "cfg_scale": 6.5,
-        "width": req.width,
-        "height": req.height,
-        "sampler_name": "DPM++ 2M",
+        "steps": sp.steps,
+        "cfg_scale": sp.cfg,
+        "width": sp.size,
+        "height": sp.size,
+        "sampler_name": sp.a1111_sampler,
         "seed": req.seed if req.seed is not None else -1,
     }
     if cfg.get("image_model"):

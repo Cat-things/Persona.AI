@@ -114,6 +114,9 @@ async def run_turn(
                 raise TurnError(410, "This character is no longer available")
             speakers = [c]
 
+    if not speakers and room and room.turn_mode == "manual" and content is not None:
+        yield {"type": "stopped"}  # message saved; the user chooses who answers
+        return
     if not speakers:
         raise TurnError(400, "No character available to reply")
     if content is not None:

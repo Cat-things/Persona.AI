@@ -133,6 +133,7 @@ export function SettingsPage() {
       </Section>
 
       <SettingsExtras.Personas />
+      <SettingsExtras.Training />
 
       <Section title="Appearance">
         <div className="flex gap-2" role="radiogroup" aria-label="Theme">

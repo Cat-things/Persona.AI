@@ -216,6 +216,13 @@ class PersonaIn(BaseModel):
     is_default: bool = False
 
 
+class PersonaUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
+    description: str | None = Field(default=None, max_length=4000)
+    avatar_url: str | None = None
+    is_default: bool | None = None
+
+
 class PersonaOut(ORM):
     id: str
     name: str
@@ -316,6 +323,13 @@ class RoomIn(BaseModel):
     turn_mode: Literal["auto", "round_robin", "manual"] = "auto"
 
 
+class RoomUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
+    topic: str | None = Field(default=None, max_length=4000)
+    character_ids: list[str] | None = Field(default=None, min_length=1, max_length=8)
+    turn_mode: Literal["auto", "round_robin", "manual"] | None = None
+
+
 class RoomMemberOut(ORM):
     character_id: str
     position: int
@@ -329,6 +343,10 @@ class RoomOut(ORM):
     turn_mode: str
     members: list[RoomMemberOut]
     created_at: datetime
+
+
+class RoomCreated(RoomOut):
+    chat_id: str
 
 
 # ---------- misc ----------

@@ -494,6 +494,7 @@ export function ChatPage() {
         confirmLabel={confirmMsg?.rewind ? "Rewind" : "Delete"}
         danger
       />
+      {extras.overlay}
     </div>
   );
 }

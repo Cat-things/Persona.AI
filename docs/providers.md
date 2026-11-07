@@ -11,7 +11,7 @@ Any server that speaks the OpenAI `/v1/chat/completions` API with streaming work
 
 | Server | Base URL | Notes |
 |---|---|---|
-| Ollama | `http://localhost:11434/v1` (Docker: `http://ollama:11434/v1`) | `ollama pull llama3.1:8b` |
+| Ollama | `http://localhost:11434/v1` (Docker: `http://ollama:11434/v1`) | `ollama pull gemma3:12b` (see [models.md](models.md)) |
 | LM Studio | `http://localhost:1234/v1` | Start the local server in LM Studio |
 | KoboldCpp | `http://localhost:5001/v1` | |
 | llama.cpp server | `http://localhost:8080/v1` | `llama-server -m model.gguf -c 8192` |

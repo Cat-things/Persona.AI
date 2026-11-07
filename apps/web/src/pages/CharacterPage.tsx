@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Flag, Heart, MessageCircle, Pencil, Plus } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Avatar } from "../components/Avatar";
+import { Popover } from "../components/Popover";
 import { api } from "../lib/api";
 import { relativeTime } from "../lib/time";
 import { errorText, useToast } from "../lib/toast";
@@ -42,15 +43,19 @@ export function CharacterPage() {
     }
   };
 
-  const exportCard = async () => {
+  const exportCard = async (format: "json" | "png") => {
     try {
-      const card = await api.exportCard(c.id);
-      const blob = new Blob([JSON.stringify(card, null, 2)], { type: "application/json" });
+      const blob =
+        format === "png"
+          ? await api.exportCardPng(c.id)
+          : new Blob([JSON.stringify(await api.exportCard(c.id), null, 2)], {
+              type: "application/json",
+            });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `${c.name.replace(/[^\w-]+/g, "_")}.json`;
+      a.download = `${c.name.replace(/[^\w-]+/g, "_")}.${format}`;
       a.click();
-      URL.revokeObjectURL(a.href);
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     } catch (e) {
       toast(errorText(e), "error");
     }
@@ -115,9 +120,37 @@ export function CharacterPage() {
           </Link>
         )}
         {c.is_owner && (
-          <button className="btn-ghost" onClick={exportCard}>
-            <Download size={17} /> Export card
-          </button>
+          <Popover
+            label="Export card"
+            trigger={(p) => (
+              <button {...p} className="btn-ghost">
+                <Download size={17} /> Export card
+              </button>
+            )}
+          >
+            {(close) => (
+              <>
+                <button
+                  className="menu-item"
+                  onClick={() => {
+                    close();
+                    void exportCard("png");
+                  }}
+                >
+                  PNG with picture
+                </button>
+                <button
+                  className="menu-item"
+                  onClick={() => {
+                    close();
+                    void exportCard("json");
+                  }}
+                >
+                  JSON (Card V2)
+                </button>
+              </>
+            )}
+          </Popover>
         )}
         {!c.is_owner && (
           <button className="btn-ghost" onClick={report}>

@@ -40,6 +40,7 @@ REDIS=0
 BUILD=0            # docker: build the image from source instead of pulling
 SEED=""            # yes | no (sample characters)
 DOWNLOAD_CHECKPOINT=""  # yes | no
+CHECKPOINT_MODEL=""     # sd15 | sdxl | "" (by VRAM)
 RESTORE_FILE=""
 PURGE=0
 
@@ -57,6 +58,9 @@ Commands:
   uninstall          Stop and remove services (keeps data unless --purge)
   doctor             Health check
   status             Show service status
+  export-training [--out DIR]
+                     Export opted-in users' rated chats as fine-tuning data
+                     (see training/README.md; the files contain private chats)
 
 Options:
   --docker | --native        Install mode (default: ask; Docker recommended)
@@ -73,7 +77,9 @@ Options:
   --gpu auto|nvidia|amd|none GPU to use (default: auto-detect)
   --image-gen comfyui|none   Set up ComfyUI for avatar generation
   --checkpoint / --no-checkpoint
-                             Download a starter image model for ComfyUI (~2 GB)
+                             Download a starter image model for ComfyUI
+  --checkpoint-model sd15|sdxl
+                             Which starter model (default: sdxl with 10 GB+ VRAM)
   --tts / --no-tts           Local text to speech (Kokoro)
   --stt / --no-stt           Local speech recognition (faster-whisper)
   --redis                    Add Redis (shared rate limits, instant job pickup)
@@ -110,6 +116,7 @@ parse_args() {
       --image-gen) IMAGE_GEN="$next"; i=$((i + 1)) ;;
       --checkpoint) DOWNLOAD_CHECKPOINT="yes" ;;
       --no-checkpoint) DOWNLOAD_CHECKPOINT="no" ;;
+      --checkpoint-model) CHECKPOINT_MODEL="$next"; i=$((i + 1)) ;;
       --tts) TTS="yes" ;;
       --no-tts) TTS="no" ;;
       --stt) STT="yes" ;;
@@ -303,15 +310,44 @@ detect_gpu() {
   return 0
 }
 
+# Default chat models: official, safety-tuned instruct releases (Google Gemma 3, Meta Llama),
+# pulled from the Ollama library as GGUF (weights only, no code). Uncensored community
+# roleplay finetunes are deliberately not offered as defaults; see docs/models.md.
 recommend_model() {
   if [[ -n "$MODEL" ]]; then return; fi
   local mem=$VRAM_MB
   if [[ "$GPU_VENDOR" == "apple" ]]; then mem=$((RAM_MB * 2 / 3)); fi
-  if [[ $mem -ge 20000 ]]; then MODEL="mistral-small:24b"
-  elif [[ $mem -ge 12000 ]]; then MODEL="mistral-nemo:12b"
-  elif [[ $mem -ge 7000 ]]; then MODEL="llama3.1:8b"
+  if [[ $mem -ge 20000 ]]; then MODEL="gemma3:27b"
+  elif [[ $mem -ge 10000 ]]; then MODEL="gemma3:12b"
+  elif [[ $mem -ge 6000 ]]; then MODEL="llama3.1:8b"
   elif [[ $RAM_MB -ge 12000 ]]; then MODEL="llama3.1:8b"
-  else MODEL="llama3.2:3b"
+  else MODEL="gemma3:4b"
+  fi
+}
+
+# Starter image model: Lykon's DreamShaper, safetensors only (no pickled code), SHA-256 pinned.
+# 10 GB+ VRAM gets the SDXL Lightning *SFW* build (tuned to avoid explicit output, 6 steps);
+# smaller GPUs and CPUs get SD 1.5 DreamShaper 8.
+CKPT_FILE="" CKPT_URL="" CKPT_SHA="" CKPT_LABEL=""
+pick_checkpoint() {
+  local mem=$VRAM_MB
+  [[ "$GPU_VENDOR" == "apple" ]] && mem=$((RAM_MB / 2))
+  if [[ "${CHECKPOINT_MODEL:-}" == "sdxl" || ( -z "${CHECKPOINT_MODEL:-}" && $mem -ge 10000 ) ]]; then
+    CKPT_FILE="DreamShaperXL_Lightning-SFW.safetensors"
+    CKPT_URL="https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/main/$CKPT_FILE"
+    CKPT_SHA="832e7bb2302c3cd67c818ca4fe9dcbedf696d3070dab5463127263ec4db9899f"
+    CKPT_LABEL="DreamShaper XL Lightning SFW, ~7 GB, OpenRAIL++-M license"
+  else
+    CKPT_FILE="DreamShaper_8_pruned.safetensors"
+    CKPT_URL="https://huggingface.co/Lykon/DreamShaper/resolve/main/$CKPT_FILE"
+    CKPT_SHA="879db523c30d3b9017143d56705015e15a2cb5628762c11d086fed9538abd7fd"
+    CKPT_LABEL="DreamShaper 8, ~2 GB, CreativeML Open RAIL-M license"
+  fi
+}
+
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  else shasum -a 256 "$1" | awk '{print $1}'
   fi
 }
 
@@ -500,7 +536,8 @@ plan_install() {
     fi
   fi
   if [[ "$IMAGE_GEN" == "comfyui" && -z "$DOWNLOAD_CHECKPOINT" ]]; then
-    if confirm "Download a starter image model (DreamShaper 8, ~2 GB)?" "y"; then DOWNLOAD_CHECKPOINT="yes"; else DOWNLOAD_CHECKPOINT="no"; fi
+    pick_checkpoint
+    if confirm "Download a starter image model ($CKPT_LABEL)?" "y"; then DOWNLOAD_CHECKPOINT="yes"; else DOWNLOAD_CHECKPOINT="no"; fi
   fi
   if [[ -z "$TTS" ]]; then
     if confirm "Enable local voices (Kokoro text to speech)?" "y"; then TTS="yes"; else TTS="no"; fi
@@ -724,7 +761,7 @@ EOF
     if [[ "$GPU_VENDOR" == "nvidia" ]]; then env_set COMFYUI_IMAGE "yanwk/comfyui-boot:cu126-slim"
     else env_set COMFYUI_IMAGE "yanwk/comfyui-boot:cpu"
     fi
-    [[ "$DOWNLOAD_CHECKPOINT" == "yes" ]] && env_default IMAGE_MODEL "DreamShaper_8_pruned.safetensors"
+    [[ "$DOWNLOAD_CHECKPOINT" == "yes" ]] && { pick_checkpoint; env_default IMAGE_MODEL "$CKPT_FILE"; }
     mkdir -p "$INSTALL_DIR/comfyui"
   fi
   if [[ "$TTS" == "yes" ]]; then
@@ -957,7 +994,7 @@ native_install() {
     native_comfyui
     env_set IMAGE_PROVIDER comfyui
     env_set IMAGE_BASE_URL "http://127.0.0.1:8188"
-    [[ "$DOWNLOAD_CHECKPOINT" == "yes" ]] && env_default IMAGE_MODEL "DreamShaper_8_pruned.safetensors"
+    [[ "$DOWNLOAD_CHECKPOINT" == "yes" ]] && { pick_checkpoint; env_default IMAGE_MODEL "$CKPT_FILE"; }
   fi
   ok "Settings in $ENV_FILE (secrets are never printed)"
 
@@ -1188,10 +1225,10 @@ EOF
   ok "ComfyUI running on 127.0.0.1:8188"
 }
 
-CHECKPOINT_URL="https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors"
-
 download_checkpoint() {
-  local dir="$1" how="$2" file="DreamShaper_8_pruned.safetensors"
+  local dir="$1" how="$2"
+  pick_checkpoint
+  local file="$CKPT_FILE"
   if [[ "$how" == "docker" ]]; then
     # The ComfyUI container installs itself into the volume on first start; wait for it.
     local i
@@ -1203,10 +1240,17 @@ download_checkpoint() {
   fi
   _as_owner "$INSTALL_DIR" mkdir -p "$dir" 2>/dev/null || $SUDO mkdir -p "$dir"
   if [[ -s "$dir/$file" ]]; then ok "Image model already present"; return; fi
-  info "Downloading $file (~2 GB, CreativeML Open RAIL-M license)"
-  if curl -fL --progress-bar -o "$dir/$file.part" "$CHECKPOINT_URL" 2>/dev/null || $SUDO curl -fL --progress-bar -o "$dir/$file.part" "$CHECKPOINT_URL"; then
+  info "Downloading $file ($CKPT_LABEL)"
+  if curl -fL --progress-bar -o "$dir/$file.part" "$CKPT_URL" 2>/dev/null || $SUDO curl -fL --progress-bar -o "$dir/$file.part" "$CKPT_URL"; then
+    local got
+    got=$(sha256_of "$dir/$file.part" 2>/dev/null || $SUDO sh -c "sha256sum '$dir/$file.part' | cut -d' ' -f1")
+    if [[ "$got" != "$CKPT_SHA" ]]; then
+      rm -f "$dir/$file.part" 2>/dev/null || $SUDO rm -f "$dir/$file.part"
+      warn "Image model checksum mismatch; the download was deleted. Re-run the installer to retry."
+      return
+    fi
     _as_owner "$dir" mv "$dir/$file.part" "$dir/$file" || $SUDO mv "$dir/$file.part" "$dir/$file"
-    ok "Image model ready"
+    ok "Image model ready (checksum verified)"
   else
     warn "Checkpoint download failed; put any .safetensors checkpoint in $dir and set it in Admin → Providers."
   fi
@@ -1431,6 +1475,30 @@ cmd_uninstall() {
   info "Ollama, Docker and Caddy were left installed."
 }
 
+cmd_export_training() {
+  require_install
+  local out="${RESTORE_FILE:-$PWD/persona-training-data}"
+  step "Export training data"
+  [[ -e "$out" ]] && die "$out already exists; pass --out DIR or remove it first"
+  (umask 077 && mkdir -p "$out")
+  if [[ "$MODE" == "docker" ]]; then
+    compose_here
+    # Write inside the container, then stream the folder out (avoids uid 10001 file ownership).
+    "${COMPOSE[@]}" exec -T persona sh -c \
+      'rm -rf /tmp/training-data && persona export-training --out /tmp/training-data >&2 && tar -C /tmp/training-data -cf - . && rm -rf /tmp/training-data' \
+      | (umask 077 && tar -C "$out" -xf -)
+  else
+    local tmp="$DATA_DIR/training-export"
+    $SUDO rm -rf "$tmp"
+    run_persona export-training --out "$tmp"
+    $SUDO cp -r "$tmp/." "$out/"
+    $SUDO rm -rf "$tmp"
+    [[ -n "$SUDO" ]] && $SUDO chown -R "$(id -u):$(id -g)" "$out"
+  fi
+  chmod -R go-rwx "$out"
+  ok "Wrote $out (private conversations: keep it safe, delete it after training)"
+}
+
 cmd_doctor() {
   require_install
   step "Persona.AI doctor ($MODE, $INSTALL_DIR)"
@@ -1493,6 +1561,7 @@ main() {
     uninstall | remove) cmd_uninstall ;;
     doctor | check) cmd_doctor ;;
     status) cmd_status ;;
+    export-training) cmd_export_training ;;
     help) usage ;;
     *) die "Unknown command: $COMMAND (see --help)" ;;
   esac

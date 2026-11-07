@@ -126,6 +126,57 @@ def create_admin(
     typer.echo(f"{asyncio.run(_go())} admin '{username}'.")
 
 
+@app.command("export-training")
+def export_training(
+    out: Path = typer.Option(Path("training-data"), help="Output directory"),
+    min_rating: int = typer.Option(3, min=1, max=4, help="Stars a reply needs to be learned from"),
+    include_unrated: bool = typer.Option(False, help="Also learn from unrated replies"),
+) -> None:
+    """Export opted-in users' rated chats as fine-tuning data (sft.jsonl, dpo.jsonl)."""
+    from persona.db import sessionmaker
+    from persona.services.training import export
+
+    async def _go():
+        run_migrations()
+        async with sessionmaker()() as db:
+            return await export(db, out, min_rating=min_rating, include_unrated=include_unrated)
+
+    st = asyncio.run(_go())
+    typer.echo(
+        f"{st.users} opted-in users, {st.chats_seen} chats seen -> "
+        f"{st.sft_rows} SFT conversations ({st.trained_turns} learned replies), "
+        f"{st.dpo_rows} preference pairs. Dropped: {st.dropped_filter} by the content filter, "
+        f"{st.dropped_unrated} with no well-rated replies."
+    )
+    for n in st.notes:
+        typer.echo(f"Note: {n}")
+    typer.echo(f"Wrote {out}/sft.jsonl and {out}/dpo.jsonl")
+
+
+@app.command("filter-jsonl")
+def filter_jsonl(src: Path, dest: Path) -> None:
+    """Run a public dataset (.jsonl, `messages` or ShareGPT) through the strict content filter."""
+    import json
+
+    from persona.services.training import filter_row
+
+    kept = dropped = 0
+    with src.open(encoding="utf-8") as fin, dest.open("w", encoding="utf-8") as fout:
+        for line in fin:
+            if not line.strip():
+                continue
+            try:
+                row = filter_row(json.loads(line))
+            except ValueError:
+                row = None
+            if row is None:
+                dropped += 1
+                continue
+            fout.write(json.dumps(row, ensure_ascii=False) + "\n")
+            kept += 1
+    typer.echo(f"Kept {kept} conversations, dropped {dropped}. Wrote {dest}")
+
+
 @app.command()
 def backup(
     out: Path = typer.Option(None, help="Output .tar.gz (default: DATA_DIR/backups/<timestamp>)"),

@@ -19,7 +19,14 @@ from persona.services import storage
 
 router = APIRouter(tags=["users"])
 
-ALLOWED_PREFS = {"theme", "autoplay_voice", "default_persona_id", "reduce_motion", "language"}
+ALLOWED_PREFS = {
+    "theme",
+    "autoplay_voice",
+    "default_persona_id",
+    "reduce_motion",
+    "language",
+    "training_opt_in",  # consent to use this user's rated chats for fine-tuning (default off)
+}
 
 
 @router.get("/me", response_model=UserMe)
@@ -45,6 +52,8 @@ async def update_me(body: UserUpdate, user: CurrentUser, db: DB) -> User:
     if body.preferences is not None:
         prefs = dict(user.preferences or {})
         prefs.update({k: v for k, v in body.preferences.items() if k in ALLOWED_PREFS})
+        if "training_opt_in" in prefs:
+            prefs["training_opt_in"] = prefs["training_opt_in"] is True
         user.preferences = prefs
     await db.commit()
     await db.refresh(user)
