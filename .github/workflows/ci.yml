@@ -103,6 +103,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit 1 }
           .\install.ps1 status; if ($LASTEXITCODE -eq 0) { throw 'status should fail when nothing is installed' }
           Write-Host 'install.ps1 parses and runs'
+          exit 0  # the expected failure above leaves $LASTEXITCODE at 1
       - name: PSScriptAnalyzer
         shell: pwsh
         run: |
