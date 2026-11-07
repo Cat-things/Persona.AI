@@ -77,13 +77,31 @@ dataset's licence before using it.
 Training needs an NVIDIA GPU. Use any machine you own, or a rented cloud GPU. The training
 environment is separate from the server.
 
+Run `nvidia-smi` first to see your card, its VRAM and the driver version. Then install the
+PyTorch build that matches your card:
+
+| GPU | PyTorch index | Driver needed |
+|---|---|---|
+| RTX 50 series (Blackwell: 5050, 5060, 5070, 5080, 5090) | `cu128` (required) | 570 or newer |
+| RTX 20, 30 and 40 series, A100, H100 | `cu128` or `cu126` | 560 or newer |
+
+Older cards (GTX 10 series and earlier) aren't supported by current PyTorch builds.
+
+Use Python 3.12. Rolling-release distros such as Arch, EndeavourOS and Fedora often ship a
+newer Python, and Unsloth may not have wheels for it yet. uv can download 3.12 for you:
+
 ```bash
-python -m venv .venv && . .venv/bin/activate
-pip install torch --index-url https://download.pytorch.org/whl/cu124   # match your CUDA
-pip install -r requirements.txt
+cd training
+uv venv --python 3.12 .venv && . .venv/bin/activate
+uv pip install torch --index-url https://download.pytorch.org/whl/cu128
+uv pip install -r requirements.txt
+python -c "import torch; print(torch.cuda.get_device_name(0))"   # should print your GPU
+
 python train.py --data training-data --out my-model            # SFT
 python train.py --data training-data --out my-model --dpo      # SFT, then DPO
 ```
+
+Plain `python -m venv` and `pip` work too, as long as the interpreter is 3.12.
 
 | Base (`--base`) | VRAM for 4-bit LoRA | Licence |
 |---|---|---|
@@ -91,6 +109,20 @@ python train.py --data training-data --out my-model --dpo      # SFT, then DPO
 | `unsloth/Llama-3.1-8B-Instruct` (default) | ~8 GB | Llama 3.1 Community |
 | `unsloth/Qwen3-8B` | ~8 GB | Apache-2.0 |
 | `unsloth/gemma-3-12b-it` | ~14 GB | Gemma Terms of Use |
+
+On an **8 GB card** that also runs your desktop (for example an RTX 5050, 4060 or 3070), part
+of the VRAM is already in use. Either start with the 3B model, or train the 8B model with
+shorter sequences and a batch size of 1:
+
+```bash
+python train.py --data training-data --out my-model --base unsloth/Llama-3.2-3B-Instruct
+python train.py --data training-data --out my-model --max-len 2048 --batch 1 --grad-accum 16
+```
+
+If you see `CUDA out of memory`, close GPU-heavy apps (browsers and games use VRAM), stop
+Ollama while training (`systemctl stop ollama`, or `docker compose stop ollama`), then lower
+`--max-len`. Training also needs free system RAM: plan on 12 GB or more for an 8B model,
+and about 8 GB for 3B.
 
 The default settings are rank-16 LoRA, two epochs, learning rate 1e-4, cosine schedule and
 4,096-token sequences. `train.py` drops the oldest turns of long chats, never the system

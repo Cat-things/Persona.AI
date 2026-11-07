@@ -1,5 +1,5 @@
-# Training environment (separate from the server). Needs an NVIDIA GPU with CUDA.
-# Install PyTorch for your CUDA version first: https://pytorch.org/get-started/locally/
+# Training environment (separate from the server). Needs an NVIDIA GPU with CUDA and Python 3.12.
+# Install PyTorch for your GPU first (RTX 50 series needs cu128); see README.md, step 2.
 unsloth>=2025.10
 transformers>=4.51
 datasets>=3.0
