@@ -590,6 +590,17 @@ ensure_docker() {
     fi
   fi
 
+  if [[ "$OS" == "macos" ]] && ! docker info >/dev/null 2>&1; then
+    # Docker CLI present but no engine running: start whichever runtime is installed.
+    if [[ -d /Applications/OrbStack.app ]] || command -v orb >/dev/null; then
+      info "Starting OrbStack"; open -ga OrbStack || orb start >/dev/null 2>&1 || true
+    elif command -v colima >/dev/null; then
+      info "Starting Colima"; colima start >/dev/null 2>&1 || true
+    elif [[ -d /Applications/Docker.app ]]; then
+      info "Starting Docker Desktop (accept its prompts if it asks)"; open -ga Docker || true
+    fi
+  fi
+
   local tries=0
   while ! docker info >/dev/null 2>&1; do
     if [[ -n "$SUDO" ]] && "$SUDO" docker info >/dev/null 2>&1; then
@@ -1017,10 +1028,12 @@ native_install() {
 native_build() {
   local app="$1"
   step "Building"
+  # ${a[@]+"${a[@]}"} below: macOS ships bash 3.2, where "${a[@]}" on an empty array
+  # is an "unbound variable" error under set -u.
   local extras=()
   [[ "$TTS" == "yes" ]] && extras+=(--extra tts)
   [[ "$STT" == "yes" ]] && extras+=(--extra stt)
-  (cd "$app/apps/server" && UV_PYTHON_INSTALL_DIR="$INSTALL_DIR/.python" "$(uv_bin)" sync -q --frozen --no-dev --python 3.12 "${extras[@]}")
+  (cd "$app/apps/server" && UV_PYTHON_INSTALL_DIR="$INSTALL_DIR/.python" "$(uv_bin)" sync -q --frozen --no-dev --python 3.12 ${extras[@]+"${extras[@]}"})
   ok "Python environment ready"
   ensure_node
   (
@@ -1303,6 +1316,9 @@ firewall_hints() {
     local p
     for p in "${ports[@]}"; do info "sudo firewall-cmd --permanent --add-port=$p/tcp"; done
     info "sudo firewall-cmd --reload"
+  elif [[ "$OS" == "macos" ]]; then
+    info "If macOS asks whether to accept incoming connections, choose Allow."
+    info "(System Settings → Network → Firewall controls this; it's off by default.)"
   else
     info "Open TCP port(s) ${ports[*]} in your firewall / router if needed."
   fi

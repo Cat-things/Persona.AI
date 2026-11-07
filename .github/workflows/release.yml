@@ -1,0 +1,94 @@
+name: Release
+
+# Push a tag like v0.2.0 to build the Android APK and attach it to a GitHub release.
+#
+# Signing: add these repository secrets to sign with your own key (so updates install over
+# earlier versions). Without them the APK is signed with the Android debug key and its file
+# name says so.
+#   ANDROID_KEYSTORE_BASE64   base64 of your .keystore file (base64 -w0 persona-release.keystore)
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: pnpm install --frozen-lockfile
+
+      - name: Signing key (optional)
+        id: sign
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "No signing secrets: building with the debug key."
+            echo "suffix=-debugkey" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          umask 077
+          mkdir -p ~/.gradle
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          {
+            echo "PERSONA_UPLOAD_STORE_FILE=$RUNNER_TEMP/release.keystore"
+            echo "PERSONA_UPLOAD_STORE_PASSWORD=$STORE_PW"
+            echo "PERSONA_UPLOAD_KEY_ALIAS=$KEY_ALIAS"
+            echo "PERSONA_UPLOAD_KEY_PASSWORD=$KEY_PW"
+          } >> ~/.gradle/gradle.properties
+          echo "suffix=" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK
+        working-directory: apps/mobile
+        env:
+          NODE_ENV: production
+        run: |
+          npx expo prebuild --platform android --no-install
+          cd android
+          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a --no-daemon
+          version="${GITHUB_REF_NAME#v}"
+          mv app/build/outputs/apk/release/app-release.apk \
+            "$GITHUB_WORKSPACE/persona-ai-${version}${{ steps.sign.outputs.suffix }}.apk"
+
+      - name: Clean up signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.keystore" ~/.gradle/gradle.properties
+
+      - name: Attach to GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --generate-notes --title "Persona.AI $GITHUB_REF_NAME"
+          gh release upload "$GITHUB_REF_NAME" persona-ai-*.apk --clobber
+          ( cd "$GITHUB_WORKSPACE" && sha256sum persona-ai-*.apk > SHA256SUMS.txt )
+          gh release upload "$GITHUB_REF_NAME" SHA256SUMS.txt --clobber
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        with:
+          name: persona-ai-apk
+          path: persona-ai-*.apk
+          retention-days: 14

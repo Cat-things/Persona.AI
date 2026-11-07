@@ -21,5 +21,8 @@ All notable changes to this project are documented here. The format follows
 - Mobile app (Expo) for Android and iOS: server setup with validation, discover, chat, rooms,
   personas, voice playback and dictation, real-time calls, character editor with avatar
   generation and voice cloning, notifications; sideloadable APK builds without an Expo account.
+- Windows installer (`install.ps1`) with Docker and native modes; macOS installer fixes for
+  bash 3.2 and Docker runtimes; CI, multi-arch Docker images and APK release builds.
+- Escalating warnings when the AI keeps refusing.
 - Training pipeline: opt-in export of rated chats (`persona export-training`), strict
   filtering, LoRA fine-tuning script with DPO and GGUF export for Ollama.

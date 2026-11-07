@@ -77,7 +77,8 @@ Without `--domain`, Persona.AI binds to `127.0.0.1` only. Ways to reach it from 
   must point at the server). The installer prints `ufw`/`firewalld` commands.
 - An SSH tunnel: `ssh -L 8000:127.0.0.1:8000 you@server`.
 - `--lan`: listens on all interfaces over plain HTTP. Browsers block the microphone on non-HTTPS
-  origins, so calls and dictation won't work this way except on `localhost`.
+  origins, so calls and dictation won't work this way in a browser except on `localhost`. The
+  [mobile app](mobile.md) isn't affected and works over `--lan`.
 
 ## Subcommands
 
@@ -90,3 +91,52 @@ Without `--domain`, Persona.AI binds to `127.0.0.1` only. Ways to reach it from 
 | `status` | Container / service status |
 | `export-training [--out DIR]` | Export opted-in users' rated chats for fine-tuning ([training guide](../training/README.md)) |
 | `uninstall [--purge]` | Remove services; `--purge` also deletes data |
+
+## Windows
+
+`install.ps1` works in Windows PowerShell 5.1 (built into Windows 10 and 11) and PowerShell 7.
+Download it, read it, then run it:
+
+```powershell
+irm https://raw.githubusercontent.com/Cat-things/Persona.AI/main/install.ps1 -OutFile install.ps1
+notepad install.ps1      # read it first
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+Everything installs for your user under `%LOCALAPPDATA%\Persona`; no admin rights are needed except to
+install Docker Desktop.
+
+| | Docker (recommended) | Native |
+|---|---|---|
+| Needs | Docker Desktop (WSL 2); the installer offers to install it with winget | uv (installed with winget); Python 3.12 and a private Node.js are downloaded |
+| Runs as | Containers, same compose file and profiles as Linux | A scheduled task at logon, or a Windows service when [NSSM](https://nssm.cc) is installed and the installer runs as admin |
+| Settings | `.env` next to `docker-compose.yml` | `persona.env` |
+| Ollama | Container (NVIDIA GPU through Docker Desktop) | Ollama for Windows (winget) |
+| HTTPS with `-Domain` | Caddy container | Not set up; use Docker mode or your own reverse proxy |
+
+The env file's permissions are set so only your account (and SYSTEM, for the service) can read
+it, and the installer never prints secrets.
+
+Options match `install.sh` in PowerShell style:
+
+```powershell
+.\install.ps1 -Docker -Yes -Domain chat.example.com -Email you@example.com
+.\install.ps1 -Native -Yes -Llm ollama -Model llama3.1:8b -Lan
+$env:PERSONA_LLM_API_KEY = '...'; .\install.ps1 -Docker -Yes -Llm external -LlmUrl https://openrouter.ai/api/v1
+.\install.ps1 update
+.\install.ps1 backup [-Out file.tar.gz]
+.\install.ps1 restore persona-20260101-120000.tar.gz
+.\install.ps1 doctor
+.\install.ps1 uninstall [-Purge]
+```
+
+Other switches: `-Dir`, `-Port`, `-Gpu auto|nvidia|none`, `-Tts`/`-NoTts`, `-Stt`/`-NoStt`,
+`-Redis`, `-Seed`/`-NoSeed`. In Docker mode a backup holds the database and media; keep a copy of
+`.env` too, since it isn't in the archive.
+
+With `-Lan`, the installer prints the firewall rule to allow the port on private networks only:
+
+```powershell
+New-NetFirewallRule -DisplayName 'Persona.AI' -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private
+```
+

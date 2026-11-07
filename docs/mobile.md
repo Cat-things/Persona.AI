@@ -32,9 +32,14 @@ passwords and chats would travel unencrypted. You can switch servers later under
 
 ## Install a ready-made APK
 
-When releases are published, the APK is attached to each
-[GitHub release](https://github.com/Cat-things/Persona.AI/releases). Open it on your phone and
-allow "install unknown apps" for your browser when Android asks.
+Each [GitHub release](https://github.com/Cat-things/Persona.AI/releases) has an APK attached,
+plus a `SHA256SUMS.txt` to verify it. Open it on your phone and allow "install unknown apps" for
+your browser when Android asks.
+
+The release workflow (`.github/workflows/release.yml`) builds it when a `v*` tag is pushed. If
+the repository has the `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`
+and `ANDROID_KEY_PASSWORD` secrets, the APK is signed with that key. Otherwise it's signed with
+the Android debug key, and the file name ends in `-debugkey`.
 
 ## Build the Android APK yourself (no Expo account)
 

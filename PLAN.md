@@ -20,7 +20,7 @@ updated, and a commit.
 | 7 | Calls (STT + streaming pipeline + barge-in) | done |
 | 8 | Group chats, personas, card import/export (+ safe default models, training pipeline) | done |
 | 9 | Mobile app (Expo) | done (not yet run on a device) |
-| 10 | Windows/macOS installer polish, CI (incl. APK release build), docs | pending |
+| 10 | Windows/macOS installer polish, CI (incl. APK release build), docs | done (install.ps1 checked in CI only; not run on a real Windows install) |
 
 ## Architecture
 
@@ -286,4 +286,23 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
   manifest and signing config. Not verified: running on a device or emulator (no Android SDK
   here), calls and push on real hardware. Also fixed a Phase 8 e2e selector that the training
   section broke; Playwright 4/4, server 84 tests.
+- After Phase 9 (testing on a real phone): fixed a launch crash (a store method named `use()`
+  was treated as React's `use` by the React Compiler and cached, breaking hook order), keyboard
+  covering inputs under Android 15 edge-to-edge, uploads failing under expo/fetch (multipart now
+  via XMLHttpRequest), and calls stuck in "speaking" after replies that were mostly *actions*
+  (playback_done race). Added escalating refusal warnings (banner, then a stop popup with a
+  growing lock-out), migration 341f9bf5a21a. Release signing key generated locally for the user.
+- Phase 10: `install.ps1` for Windows (Docker Desktop mode with the shared compose file and NVIDIA
+  overlay; native mode with uv + Python 3.12, a checksum-verified private Node for the web build,
+  scheduled task at logon or an NSSM service; Ollama via winget; secrets from the system CSPRNG in
+  an env file locked with icacls; byte-exact backup/restore via Start-Process redirection;
+  update/backup/restore/uninstall/doctor/status). macOS: install.sh now runs on bash 3.2 (empty
+  array expansion under `set -u` fixed; parse, `--help` and detection verified in a bash:3.2
+  container), starts an installed-but-stopped OrbStack, Colima or Docker Desktop, and prints a
+  macOS firewall hint. GitHub Actions: `ci.yml` (server ruff + pytest; web prettier, typecheck,
+  lint, build, Playwright; mobile typecheck, lint, full Android bundle; shellcheck + bash 3.2;
+  install.ps1 parse, smoke run and PSScriptAnalyzer on windows-latest), `docker.yml` (amd64 +
+  arm64 image to ghcr.io/cat-things/persona-server with latest/sha/semver tags, SBOM and
+  provenance), `release.yml` (APK on `v*` tags, signed when the keystore secrets exist, attached
+  with SHA256SUMS). Docs: Windows install section, release APK signing. actionlint clean.
 

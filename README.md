@@ -86,7 +86,14 @@ Day-to-day management:
 ./install.sh uninstall   # keeps your data unless you add --purge
 ```
 
-Windows: run `install.ps1` from PowerShell. See [docs/install.md](docs/install.md) for every option.
+On Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/Cat-things/Persona.AI/main/install.ps1 -OutFile install.ps1
+powershell -ExecutionPolicy Bypass -File .\install.ps1      # read it first
+```
+
+See [docs/install.md](docs/install.md) for every option, including Windows.
 
 ## Hardware
 

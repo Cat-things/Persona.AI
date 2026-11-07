@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Server (ruff, pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --python 3.12
+      - run: uv run ruff format --check persona tests
+      - run: uv run ruff check persona tests
+      - run: uv run pytest -q
+
+  web:
+    name: Web (typecheck, lint, build, Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --check "apps/web/src/**" "apps/web/e2e/**" "packages/shared/src/**"
+      - run: pnpm --filter @persona/shared typecheck
+      - run: pnpm --filter @persona/web typecheck
+      - run: pnpm --filter @persona/web lint
+      - run: pnpm --filter @persona/web build
+      - run: uv sync --frozen --python 3.12
+        working-directory: apps/server
+      - run: pnpm --filter @persona/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @persona/web test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: apps/web/test-results
+          retention-days: 7
+
+  mobile:
+    name: Mobile (typecheck, lint, bundle)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @persona/mobile typecheck
+      - run: pnpm --filter @persona/mobile lint
+      - name: Bundle every screen for Android (catches broken imports)
+        run: npx expo export --platform android --output-dir /tmp/expo-export
+        working-directory: apps/mobile
+
+  installers:
+    name: Installers (shellcheck, bash 3.2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: shellcheck install.sh
+      # macOS ships bash 3.2; make sure the installer still parses and runs there.
+      - run: |
+          docker run --rm -v "$PWD/install.sh:/install.sh:ro" bash:3.2 bash -c '
+            bash -n /install.sh && bash /install.sh --help >/dev/null && echo "bash 3.2 ok"'
+
+  installer-windows:
+    name: Installer (Windows PowerShell)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Parse with Windows PowerShell 5.1 and PowerShell 7
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD\install.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | Format-List; exit 1 }
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 help | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          .\install.ps1 status; if ($LASTEXITCODE -eq 0) { throw 'status should fail when nothing is installed' }
+          Write-Host 'install.ps1 parses and runs'
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $r = Invoke-ScriptAnalyzer -Path .\install.ps1 -Severity Error, Warning `
+            -ExcludeRule PSAvoidUsingWriteHost, PSUseShouldProcessForStateChangingFunctions, PSUseApprovedVerbs, PSUseSingularNouns, PSAvoidUsingPositionalParameters
+          $r | Format-Table -AutoSize
+          if ($r | Where-Object Severity -eq 'Error') { exit 1 }
