@@ -57,6 +57,8 @@ def _audio_response(data: bytes, mime: str) -> Response:
     return Response(data, media_type=mime, headers={"Cache-Control": "private, max-age=86400"})
 
 
+# GET aliases let native players stream the audio with an Authorization header.
+@router.get("/voices/{voice_id}/preview", dependencies=[gen_limit])
 @router.post("/voices/{voice_id}/preview", dependencies=[gen_limit])
 async def preview(
     voice_id: str, db: DB, user: CurrentUser, body: PreviewIn | None = None
@@ -72,6 +74,7 @@ async def preview(
     return _audio_response(data, mime)
 
 
+@router.get("/messages/{message_id}/tts", dependencies=[gen_limit])
 @router.post("/messages/{message_id}/tts", dependencies=[gen_limit])
 async def message_tts(message_id: str, db: DB, user: CurrentUser) -> Response:
     msg, _ = await owned_message(db, message_id, user)

@@ -73,7 +73,7 @@ test("persona and group room", async ({ page }, info) => {
   await page.fill("#pn", "Wren");
   await page.getByLabel("Use for new chats").check();
   await page.getByRole("button", { name: "Create persona" }).click();
-  await expect(page.getByText("Default")).toBeVisible();
+  await expect(page.getByText("Default", { exact: true })).toBeVisible();
 
   await page.goto("/rooms/new");
   await page.fill("#rn", "Campfire");

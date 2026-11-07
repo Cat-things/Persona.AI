@@ -66,9 +66,12 @@ async def test_voice_library_preview_and_message_tts(client, admin, alice):
     assert r1.status_code == 200 and len(r1.content) > 1000
     r2 = await client.post(f"/api/v1/messages/{mid}/tts", headers=alice)
     assert r2.content == r1.content  # cached
+    r3 = await client.get(f"/api/v1/messages/{mid}/tts", headers=alice)  # native players
+    assert r3.status_code == 200 and r3.content == r1.content
 
     bob, _ = await register(client, "bob")
     assert (await client.post(f"/api/v1/messages/{mid}/tts", headers=bob)).status_code == 404
+    assert (await client.get(f"/api/v1/messages/{mid}/tts", headers=bob)).status_code == 404
 
 
 async def test_action_only_message_is_rejected(client, admin, alice):

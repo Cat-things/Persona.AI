@@ -19,8 +19,8 @@ updated, and a commit.
 | 6 | TTS voices + playback | done |
 | 7 | Calls (STT + streaming pipeline + barge-in) | done |
 | 8 | Group chats, personas, card import/export (+ safe default models, training pipeline) | done |
-| 9 | Mobile app (Expo) | pending |
-| 10 | Windows/macOS installer polish, CI, docs | pending |
+| 9 | Mobile app (Expo) | done (not yet run on a device) |
+| 10 | Windows/macOS installer polish, CI (incl. APK release build), docs | pending |
 
 ## Architecture
 
@@ -258,4 +258,32 @@ so the client flushes its playback queue. WebSocket first; WebRTC is a later opt
   `training/train.py` (Unsloth QLoRA, masked loss, optional DPO, GGUF + Modelfile for
   Ollama). 84 server tests; Playwright 4/4 (adds persona + room flow). `train.py` is not
   run here (no NVIDIA GPU); its masking logic was checked with a stub tokenizer.
+- Phase 9: Expo SDK 58 app in `apps/mobile` (expo-router, React 19.3, RN 0.88, TanStack Query,
+  shared `@persona/shared` client). First launch asks for the server address and proves it is
+  a Persona.AI server (`/auth/config` must answer `app: "persona"`; HTTPS tried first; warns
+  before plain HTTP to non-local addresses). Refresh token in the OS keystore (expo-secure-store).
+  Screens: setup, login/register (first-run admin, invite codes), Discover (search, sort and tag
+  chips, continue-chatting row, infinite list), Chats (grouped by day), character page (continue
+  / new chat, like, report), chat (streaming over the shared WebSocket, swipes, 1-4 stars,
+  long-press actions: copy / edit / pin / rewind / report / delete; memory sheet; persona picker;
+  room speaker chips; read aloud + auto-play; dictation), call screen (react-native-audio-api:
+  echo-cancelled capture via Android `voiceCommunication` / iOS voice processing, resampled to
+  16 kHz PCM16 20 ms frames; gapless 24 kHz playback with a buffer queue; barge-in), character
+  editor (upload, avatar generator with 4 options, voice picker with previews and cloning with
+  rights confirmation, card import, visibility, tags, advanced fields), room editor, You tab
+  (profile, personas, theme, auto-play, training opt-in, server switch, admin link).
+  Notifications: Expo push when the build has an EAS projectId; otherwise polls
+  `/me/notifications` while open and shows local notifications. Server: GET aliases for
+  message TTS and voice previews (native players stream with an Authorization header);
+  client `authHeaders()` refreshes tokens that expire within a minute. Config: icons from the
+  logo, cleartext allowed for LAN servers, RECORD_AUDIO kept (image-picker's
+  `microphonePermission: false` would have stripped it), SYSTEM_ALERT_WINDOW blocked,
+  `plugins/withReleaseSigning.js` signs release APKs with a keystore from gradle properties,
+  `eas.json` (preview APK, production AAB). docs/mobile.md: reaching the server from a phone,
+  building the APK without an Expo account, EAS, notifications, troubleshooting.
+  Verified: typecheck, eslint (expo config, React Compiler rules), expo-doctor 20/20,
+  `expo export` bundles all routes for Android, `expo prebuild` produces the expected
+  manifest and signing config. Not verified: running on a device or emulator (no Android SDK
+  here), calls and push on real hardware. Also fixed a Phase 8 e2e selector that the training
+  section broke; Playwright 4/4, server 84 tests.
 

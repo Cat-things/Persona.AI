@@ -30,6 +30,7 @@ Optional extras: `uv sync --extra tts --extra stt` for in-process Kokoro and fas
 ```bash
 cd apps/server && uv run pytest            # unit + API + WebSocket tests
 cd apps/web && pnpm test:e2e               # Playwright smoke test (desktop + mobile)
+cd apps/mobile && pnpm typecheck && pnpm lint && npx expo-doctor   # mobile app; see docs/mobile.md
 ```
 
 Provider adapters are tested against `httpx.MockTransport`

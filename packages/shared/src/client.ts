@@ -74,6 +74,29 @@ export class PersonaClient {
     return this.access !== null;
   }
 
+  /** Seconds until the access token expires (0 if none or unreadable). */
+  private accessTtl(): number {
+    if (!this.access) return 0;
+    try {
+      const part = this.access.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      const payload = JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, "="))) as {
+        exp?: number;
+      };
+      return payload.exp ? payload.exp - Date.now() / 1000 : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Authorization header with a token valid for at least a minute, for native players and
+   * uploads that can't go through request() (e.g. streaming audio from a URL).
+   */
+  async authHeaders(): Promise<Record<string, string>> {
+    if (this.accessTtl() < 60) await this.refresh();
+    return this.access ? { Authorization: `Bearer ${this.access}` } : {};
+  }
+
   url(path: string) {
     return `${this.baseUrl}/api/v1${path}`;
   }
@@ -326,6 +349,7 @@ export class PersonaClient {
   // ---------- voices / images / jobs ----------
   voices = () => this.request<Voice[]>("GET", "/voices");
   ttsUrl = (messageId: string) => this.url(`/messages/${messageId}/tts`);
+  voicePreviewUrl = (voiceId: string) => this.url(`/voices/${voiceId}/preview`);
   async tts(messageId: string): Promise<Blob> {
     let res = await this.raw("POST", `/messages/${messageId}/tts`);
     if (res.status === 401 && (await this.refresh()))

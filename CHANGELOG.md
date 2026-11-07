@@ -18,5 +18,8 @@ All notable changes to this project are documented here. The format follows
 - Personas, group chat rooms with turn-taking, Character Card V1/V2/V3 import and export.
 - Safe default models: official safety-tuned Gemma 3 / Llama 3.1 chat models and a
   checksum-verified SFW image checkpoint, chosen by hardware.
+- Mobile app (Expo) for Android and iOS: server setup with validation, discover, chat, rooms,
+  personas, voice playback and dictation, real-time calls, character editor with avatar
+  generation and voice cloning, notifications; sideloadable APK builds without an Expo account.
 - Training pipeline: opt-in export of rated chats (`persona export-training`), strict
   filtering, LoRA fine-tuning script with DPO and GGUF export for Ollama.
