@@ -172,3 +172,37 @@ async def test_stt_upload(client, admin, alice):
     wav = audio.pcm16_to_wav(tone(1000), 16000)
     r = await client.post("/api/v1/stt", headers=alice, files={"file": ("a.wav", wav, "audio/wav")})
     assert r.status_code == 200 and r.json()["text"]
+
+
+def test_chunker_keeps_actions_whole():
+    from persona.services.audio import speakable
+
+    chunks, rest = chunk_text("*leans in. Smiles softly.* Hello there. And", first=False)
+    assert rest == "And"
+    # No chunk ends inside an open action, so TTS never reads half an action aloud.
+    assert all(c.count("*") % 2 == 0 for c in chunks)
+    assert " ".join(speakable(c) for c in chunks).strip() == "Hello there."
+    chunks, rest = chunk_text("*sighs. Looks away", first=False)
+    assert chunks == [] and rest.startswith("*sighs.")
+
+
+def test_call_action_only_reply_returns_to_listening(monkeypatch):
+    """A reply with nothing to say aloud must not leave the call stuck in speaking/thinking."""
+    from persona.main import app
+    from persona.services.llm import base
+
+    async def actions_only(t, messages):
+        for w in ["*smiles ", "warmly ", "and ", "nods.*"]:
+            yield w
+
+    monkeypatch.setattr(base, "stream_mock", actions_only)
+    with TestClient(app) as tc:
+        h, chat, tok = _setup(tc, "calladmin2")
+        with tc.websocket_connect(f"/api/v1/ws/call?token={tok}&chat_id={chat['id']}") as ws:
+            _recv_until(ws, {"ready"})
+            ws.send_bytes(noise(300) + tone(900) + silence(700))
+            evs, audio_bytes = _recv_until(ws, {"bot_done"})
+            assert audio_bytes == 0
+            evs, _ = _recv_until(ws, {"state"})
+            assert evs[-1]["state"] == "listening"  # without any playback_done from the client
+            ws.send_text(json.dumps({"type": "hangup"}))

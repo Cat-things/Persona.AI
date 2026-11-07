@@ -37,13 +37,28 @@ SendJson = Callable[[dict[str, Any]], Awaitable[None]]
 SendBytes = Callable[[bytes], Awaitable[None]]
 
 
+def _balance_actions(chunks: list[str], rest: str) -> tuple[list[str], str]:
+    """Never end a chunk inside an open *action*: "*leans in. Smiles*" stays one piece, so
+    speakable() can drop the whole action instead of reading half of it aloud."""
+    out: list[str] = []
+    pending = ""
+    for c in chunks:
+        pending = f"{pending} {c}" if pending else c
+        if pending.count("*") % 2 == 0:
+            out.append(pending)
+            pending = ""
+    if pending:
+        rest = f"{pending} {rest}" if rest else pending
+    return out, rest
+
+
 def chunk_text(buffer: str, first: bool) -> tuple[list[str], str]:
     chunks, rest = audio.split_sentences(buffer)
-    if first and not chunks and len(rest) >= FIRST_CHUNK_MIN:
+    if first and not chunks and len(rest) >= FIRST_CHUNK_MIN and rest.count("*") % 2 == 0:
         cut = max(rest.rfind(", "), rest.rfind("; "), rest.rfind(" - "))
-        if cut >= FIRST_CHUNK_MIN - 4:
+        if cut >= FIRST_CHUNK_MIN - 4 and rest[: cut + 1].count("*") % 2 == 0:
             chunks, rest = [rest[: cut + 1].strip()], rest[cut + 1 :].lstrip()
-    return chunks, rest
+    return _balance_actions(chunks, rest)
 
 
 class CallSession:
@@ -140,7 +155,11 @@ class CallSession:
         elif kind == "interrupt":
             await self.interrupt("manual")
         elif kind == "playback_done":
-            if self.awaiting_playback and (self.turn is None or self.turn.done()):
+            # awaiting_playback is only set once the reply has been fully sent, so this is
+            # safe even if the turn task hasn't returned yet. (Waiting for turn.done() lost
+            # the race when there was little or no audio, e.g. replies that were all *actions*,
+            # leaving the call stuck in "speaking".)
+            if self.awaiting_playback:
                 self.awaiting_playback = False
                 await self.set_state("listening")
         elif kind == "text":  # typed message during a call
@@ -251,8 +270,11 @@ class CallSession:
                 speaker.cancel()
                 with contextlib.suppress(asyncio.CancelledError, Exception):
                     await speaker
-        self.awaiting_playback = True
         await self.send_json({"type": "bot_done", "metrics": metrics})
+        if self.spoken:
+            self.awaiting_playback = True  # back to listening when the client says it's done
+        else:
+            await self.set_state("listening")  # nothing was audible (e.g. only *actions*)
 
     async def _speak_loop(
         self, q: asyncio.Queue[str | None], t0: float, metrics: dict[str, int]
