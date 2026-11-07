@@ -162,7 +162,7 @@ function Detect-Hardware {
     try {
       $v = & nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>$null | Select-Object -First 1
       if ($v) { $info.Gpu = 'nvidia'; $info.VramMB = [int]$v.Trim() }
-    } catch { }
+    } catch { Write-Verbose 'nvidia-smi failed; treating as no NVIDIA GPU' }
   }
   if ($Gpu -eq 'nvidia' -and $info.Gpu -ne 'nvidia') { Warn 'No working NVIDIA driver found (nvidia-smi); continuing on CPU.' }
   return $info

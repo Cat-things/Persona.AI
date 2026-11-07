@@ -108,6 +108,8 @@ jobs:
         shell: pwsh
         run: |
           $r = Invoke-ScriptAnalyzer -Path .\install.ps1 -Severity Error, Warning `
-            -ExcludeRule PSAvoidUsingWriteHost, PSUseShouldProcessForStateChangingFunctions, PSUseApprovedVerbs, PSUseSingularNouns, PSAvoidUsingPositionalParameters
+            -ExcludeRule PSAvoidUsingWriteHost, PSUseShouldProcessForStateChangingFunctions, PSUseApprovedVerbs, PSUseSingularNouns, PSAvoidUsingPositionalParameters, PSReviewUnusedParameter
+          # PSReviewUnusedParameter is excluded: script parameters are read inside functions via
+          # script scope, which the analyzer doesn't follow.
           $r | Format-Table -AutoSize
           if ($r | Where-Object Severity -eq 'Error') { exit 1 }
