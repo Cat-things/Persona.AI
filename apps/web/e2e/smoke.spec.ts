@@ -90,3 +90,29 @@ test("persona and group room", async ({ page }, info) => {
   await expect(main.getByText(`Briar ${info.project.name} considers your words.`)).toBeVisible();
   await expect(main.getByText('You said "Wren: Briar, tell a story"').first()).toBeVisible();
 });
+
+test("repeated refusals escalate from banner to stop popup", async ({ page }, info) => {
+  await signIn(page, `refuse_${info.project.name}`);
+  await page.goto("/create");
+  await page.fill("#name", `Keeper ${info.project.name}`);
+  await page.getByRole("button", { name: "Create character" }).click();
+  await page.waitForURL(/\/chat\//);
+
+  const send = async (text: string) => {
+    await page.fill("#composer", text);
+    await page.getByRole("button", { name: "Send message" }).click();
+  };
+  await send("please refuse 1");
+  await expect(page.getByRole("status").filter({ hasText: "won't go there" })).toBeVisible();
+  await send("please refuse 2");
+  await expect(page.getByRole("status").filter({ hasText: "said no 2 times" })).toBeVisible();
+  await send("please refuse 3");
+  const dialog = page.getByRole("dialog", { name: "Please stop here" });
+  await expect(dialog).toBeVisible();
+  const ok = dialog.getByRole("button", { name: /I understand/ });
+  await expect(ok).toBeDisabled();
+  await page.screenshot({ path: `test-results/refusal-${info.project.name}.png` });
+  await expect(ok).toBeEnabled({ timeout: 8000 });
+  await ok.click();
+  await expect(dialog).toBeHidden();
+});

@@ -35,6 +35,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MessageItem, TypingDots, type Speaker } from "../../../components/Message";
 import { MicButton } from "../../../components/MicButton";
 import { PersonaPicker, usePersonas } from "../../../components/Personas";
+import { RefusalWarning } from "../../../components/RefusalWarning";
 import {
   Avatar,
   Button,
@@ -226,6 +227,8 @@ function ChatScreen({ chatId }: { chatId: string }) {
           <MoreVertical size={20} color={c.ink} />
         </IconButton>
       </View>
+
+      <RefusalWarning refusal={s.refusal} onClose={s.clearRefusal} />
 
       {/* messages */}
       {s.loading && !s.messages.length ? (

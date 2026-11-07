@@ -1,4 +1,4 @@
-import type { ChatDetail, ChatEvent, Message } from "@persona/shared";
+import type { ChatDetail, ChatEvent, Message, RefusalNotice } from "@persona/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, chatSocket, errorText } from "../lib/api";
@@ -25,6 +25,9 @@ export function useChatSession(chatId: string) {
   const [typing, setTyping] = useState<Typing | null>(null);
   const [streamingId, setStreamingId] = useState<string | null>(null); // candidate id
   const [lastDone, setLastDone] = useState<Message | null>(null);
+  // Latest refusal warning (banner or stop popup); cleared by the UI when dismissed.
+  const [refusal, setRefusal] = useState<{ notice: RefusalNotice; name: string } | null>(null);
+  const speakerName = useRef("");
   const activeCandidates = useRef(new Set<string>());
   const busyRef = useRef(false);
   const setBusy = useCallback((v: boolean) => {
@@ -90,6 +93,7 @@ export function useChatSession(chatId: string) {
         case "typing":
           if (ev.chat_id !== chatId) return;
           setTyping({ characterId: ev.character_id, name: ev.name });
+          speakerName.current = ev.name;
           setLastDone(null); // another speaker follows; the turn isn't over
           return;
         case "start":
@@ -149,7 +153,8 @@ export function useChatSession(chatId: string) {
           setMessages((ms) => ms.map((m) => (m.id === ev.message.id ? ev.message : m)));
           setStreamingId(null);
           setLastDone(ev.message);
-          if (ev.filtered) toast("A reply was hidden by this server's content filter.");
+          if (ev.refusal) setRefusal({ notice: ev.refusal, name: speakerName.current });
+          else if (ev.filtered) toast("A reply was hidden by this server's content filter.");
           return;
         case "error":
           if (!busyRef.current) return;
@@ -301,7 +306,11 @@ export function useChatSession(chatId: string) {
     [chatId, qc, replace, toast],
   );
 
+  const clearRefusal = useCallback(() => setRefusal(null), []);
+
   return {
+    refusal,
+    clearRefusal,
     detail,
     setDetail,
     messages,

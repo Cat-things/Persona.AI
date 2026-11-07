@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from persona.models import Character, Chat, Message, MessageCandidate, Persona, Room, User
 from persona.schemas import MessageOut
-from persona.services import content_filter, memory, settings_store
+from persona.services import content_filter, memory, refusal, settings_store
 from persona.services.llm.base import LLMError, resolve_target, stream_chat
 from persona.services.prompt import CharacterSpec, PromptInput, Turn, build, clean_reply, macros
 
@@ -235,10 +235,19 @@ async def generate(
         finish = "filtered"
     cand.content = final
     cand.finish_reason = finish
+    cand.is_refusal = finish == "filtered" or refusal.is_refusal(final)
     chat.updated_at = datetime.now(UTC)
     await db.commit()
     await db.refresh(msg)
-    yield {"type": "done", "message": message_out(msg), "filtered": finish == "filtered"}
+    notice = None
+    if cand.is_refusal:
+        notice = refusal.notice_for(await refusal.recent_count(db, user.id)).as_dict()
+    yield {
+        "type": "done",
+        "message": message_out(msg),
+        "filtered": finish == "filtered",
+        "refusal": notice,
+    }
 
     if (user.preferences or {}).get("autoplay_voice") and (
         cfg.get("tts_provider") or "none"

@@ -15,6 +15,7 @@ import { useUser } from "../lib/auth";
 import { relativeTime } from "../lib/time";
 import { errorText, useToast } from "../lib/toast";
 import { useChatExtras } from "./chatExtras";
+import { RefusalWarning } from "../components/RefusalWarning";
 
 function MemoriesModal({
   chatId,
@@ -373,6 +374,7 @@ export function ChatPage() {
           </Popover>
         </div>
       </header>
+      <RefusalWarning refusal={s.refusal} onClose={s.clearRefusal} />
 
       <div
         ref={scroller}

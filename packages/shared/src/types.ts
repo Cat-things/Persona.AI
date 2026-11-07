@@ -228,6 +228,13 @@ export interface ModelOption {
 }
 
 // Streaming events (WebSocket + SSE share the shape)
+/** Sent with a reply the model refused; escalates per user over a rolling 30 minutes. */
+export interface RefusalNotice {
+  count: number;
+  level: "notice" | "stop";
+  hold_seconds: number;
+}
+
 export type ChatEvent =
   | { type: "user_message"; message: Message }
   | { type: "typing"; chat_id: string; character_id: string; name: string }
@@ -241,7 +248,7 @@ export type ChatEvent =
       regenerate: boolean;
     }
   | { type: "delta"; candidate_id: string; text: string }
-  | { type: "done"; message: Message; filtered: boolean }
+  | { type: "done"; message: Message; filtered: boolean; refusal?: RefusalNotice | null }
   | { type: "error"; status?: number; detail: string; candidate_id?: string }
   | { type: "stopped" }
   | { type: "pong" };

@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     TypeDecorator,
     UniqueConstraint,
+    false,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -243,6 +244,8 @@ class MessageCandidate(Base):
     rating: Mapped[int] = mapped_column(Integer, default=0)  # 0 = unrated, 1..4 stars
     model: Mapped[str] = mapped_column(String(128), default="")
     finish_reason: Mapped[str] = mapped_column(String(32), default="")
+    # The model refused (or the filter hid the reply); drives the escalating warnings.
+    is_refusal: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     created_at: Mapped[datetime] = created_col()
 
 

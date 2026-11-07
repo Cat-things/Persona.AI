@@ -196,7 +196,9 @@ async def stream_mock(t: LLMTarget, messages: list[dict[str, str]]) -> AsyncIter
     name = "I"
     if system.startswith("You are "):
         name = system[len("You are ") :].split(".")[0].split(",")[0].strip()
-    if "Summarize" in system or "summary" in system.lower()[:200]:
+    if "please refuse" in last_user.lower():  # lets tests exercise refusal handling
+        text = "I'm sorry, but I can't continue this conversation."
+    elif "Summarize" in system or "summary" in system.lower()[:200]:
         text = "Summary: " + " ".join(m["content"][:40] for m in messages[1:])[:400]
     else:
         n_swipes = sum(1 for m in messages if m["role"] == "assistant")

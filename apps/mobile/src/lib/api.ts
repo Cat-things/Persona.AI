@@ -34,7 +34,10 @@ function xhrFetch(url: string, init: RequestInit = {}): Promise<Response> {
     xhr.responseType = "text";
     xhr.onload = () => {
       const h = new Headers();
-      for (const line of xhr.getAllResponseHeaders().trim().split(/[\r\n]+/)) {
+      for (const line of xhr
+        .getAllResponseHeaders()
+        .trim()
+        .split(/[\r\n]+/)) {
         const i = line.indexOf(":");
         if (i > 0) h.append(line.slice(0, i).trim(), line.slice(i + 1).trim());
       }
