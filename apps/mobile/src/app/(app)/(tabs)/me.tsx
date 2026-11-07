@@ -20,6 +20,7 @@ import {
 import { api, errorText } from "../../../lib/api";
 import { useAuth, useUser } from "../../../lib/auth";
 import { pickImage } from "../../../lib/images";
+import { useStore } from "../../../lib/store";
 import { themePref, useTheme, type ThemePref } from "../../../lib/theme";
 import { useCaps } from "../../../lib/voice";
 
@@ -93,7 +94,7 @@ export default function Me() {
   const [displayName, setDisplayName] = useState(user.display_name);
   const [bio, setBio] = useState(user.bio);
   const [editing, setEditing] = useState<Persona | "new" | null>(null);
-  const theme = themePref.use();
+  const theme = useStore(themePref);
 
   const update = async (body: Parameters<typeof api.updateMe>[0], msg?: string) => {
     try {

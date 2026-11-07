@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
 import { api } from "./api";
-import { create } from "./store";
+import { create, useStore } from "./store";
 
 interface PlayerState {
   playing: string | null; // "m:<messageId>" | "v:<voiceId>"
@@ -52,7 +52,9 @@ class VoicePlayer {
 }
 
 export const voicePlayer = new VoicePlayer();
-export const useVoicePlayer = () => voicePlayer.state.use();
+export function useVoicePlayer() {
+  return useStore(voicePlayer.state);
+}
 
 export function useCaps() {
   return useQuery({

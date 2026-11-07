@@ -1,7 +1,13 @@
 import { useSyncExternalStore } from "react";
 
-/** Tiny observable value with a React hook; enough for app-wide UI state. */
-export function create<T>(initial: T) {
+export interface Store<T> {
+  get: () => T;
+  set: (next: T) => void;
+  subscribe: (fn: () => void) => () => void;
+}
+
+/** Tiny observable value; read it in components with `useStore(store)`. */
+export function create<T>(initial: T): Store<T> {
   let value = initial;
   const subs = new Set<() => void>();
   return {
@@ -17,8 +23,14 @@ export function create<T>(initial: T) {
         subs.delete(fn);
       };
     },
-    use(): T {
-      return useSyncExternalStore(this.subscribe, this.get);
-    },
   };
+}
+
+/**
+ * A real hook (named use*), not a `store.use()` method: the React Compiler treats calls named
+ * `use()` like React's `use` API and may cache them, which skips the hook on re-render and
+ * breaks hook order (seen as a crash in updateEffect on device).
+ */
+export function useStore<T>(store: Store<T>): T {
+  return useSyncExternalStore(store.subscribe, store.get);
 }

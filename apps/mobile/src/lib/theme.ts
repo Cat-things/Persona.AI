@@ -1,5 +1,5 @@
 import { useColorScheme } from "react-native";
-import { create } from "./store";
+import { create, useStore } from "./store";
 
 /** Same tokens as the web app (apps/web/src/index.css), converted from OKLCH to sRGB hex. */
 export const palettes = {
@@ -63,7 +63,7 @@ export type ThemePref = "dark" | "light" | "system";
 export const themePref = create<ThemePref>("dark");
 
 export function useTheme() {
-  const pref = themePref.use();
+  const pref = useStore(themePref);
   const os = useColorScheme();
   const scheme = pref === "system" ? (os === "light" ? "light" : "dark") : pref;
   return { c: palettes[scheme] as Colors, scheme, font, radius };
